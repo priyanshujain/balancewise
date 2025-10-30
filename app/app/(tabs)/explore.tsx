@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, Pressable, Alert } from 'react-native';
 
 import { Collapsible } from '@/components/ui/collapsible';
 import { ExternalLink } from '@/components/external-link';
@@ -7,9 +7,35 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { Fonts, Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabTwoScreen() {
+  const { user, signOut } = useAuth();
+  const colorScheme = useColorScheme();
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch {
+              Alert.alert('Error', 'Failed to sign out');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
@@ -21,6 +47,36 @@ export default function TabTwoScreen() {
           style={styles.headerImage}
         />
       }>
+      <ThemedView style={styles.titleContainer}>
+        <ThemedText
+          type="title"
+          style={{
+            fontFamily: Fonts.rounded,
+          }}>
+          Profile
+        </ThemedText>
+      </ThemedView>
+
+      <ThemedView style={styles.userInfoContainer}>
+        <ThemedText type="subtitle">Signed in as:</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.userEmail}>
+          {user?.email}
+        </ThemedText>
+        <ThemedText style={styles.userName}>{user?.name}</ThemedText>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.signOutButton,
+            {
+              backgroundColor: Colors[colorScheme ?? 'light'].tint,
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
+          onPress={handleSignOut}>
+          <ThemedText style={styles.signOutButtonText}>Sign Out</ThemedText>
+        </Pressable>
+      </ThemedView>
+
       <ThemedView style={styles.titleContainer}>
         <ThemedText
           type="title"
@@ -108,5 +164,32 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 16,
+  },
+  userInfoContainer: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  userEmail: {
+    fontSize: 18,
+  },
+  userName: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 16,
+  },
+  signOutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signOutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
