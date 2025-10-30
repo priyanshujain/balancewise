@@ -16,6 +16,15 @@ func (e Error) Error() string {
 	return e.Message
 }
 
+// Is implements error comparison for errors.Is()
+func (e Error) Is(target error) bool {
+	t, ok := target.(Error)
+	if !ok {
+		return false
+	}
+	return e.Code == t.Code && e.HttpStatus == t.HttpStatus
+}
+
 func New(httpStatus int, code string, message string, fields ...string) Error {
 	return Error{
 		HttpStatus: httpStatus,

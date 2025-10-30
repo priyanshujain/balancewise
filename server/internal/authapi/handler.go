@@ -27,7 +27,7 @@ type PollRequest struct {
 }
 
 type PollResponse struct {
-	Authenticated bool  `json:"authenticated"`
+	Authenticated bool   `json:"authenticated"`
 	Token         string `json:"token,omitempty"`
 	User          *User  `json:"user,omitempty"`
 }
@@ -134,7 +134,6 @@ func (h *httpHandler) handleCallback(w http.ResponseWriter, r *http.Request) {
 					align-items: center;
 					min-height: 100vh;
 					margin: 0;
-					background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
 				}
 				.container {
 					background: white;
@@ -152,15 +151,10 @@ func (h *httpHandler) handleCallback(w http.ResponseWriter, r *http.Request) {
 					color: #666;
 					margin-bottom: 1.5rem;
 				}
-				.checkmark {
-					font-size: 64px;
-					color: #4CAF50;
-				}
 			</style>
 		</head>
 		<body>
 			<div class="container">
-				<div class="checkmark">✓</div>
 				<h1>Authentication Successful!</h1>
 				<p>You can now close this window and return to the app.</p>
 			</div>
