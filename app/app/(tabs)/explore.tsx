@@ -16,24 +16,37 @@ export default function TabTwoScreen() {
   const colorScheme = useColorScheme();
 
   const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-            } catch {
-              Alert.alert('Error', 'Failed to sign out');
-            }
+    // Use window.confirm for web compatibility
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to sign out?');
+      if (!confirmed) return;
+
+      try {
+        await signOut();
+      } catch (error) {
+        window.alert('Failed to sign out');
+      }
+    } else {
+      // Use Alert.alert for native platforms
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await signOut();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to sign out');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
