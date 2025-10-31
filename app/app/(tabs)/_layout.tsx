@@ -1,35 +1,131 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialIcons } from '@expo/vector-icons';
+import MoreOptionsModal from '@/components/more-options-modal';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [showMoreModal, setShowMoreModal] = useState(false);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    Animated.timing(rotateAnim, {
+      toValue: showMoreModal ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [showMoreModal, rotateAnim]);
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
+    <View style={styles.container}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: {
+            paddingTop: 8,
+            paddingBottom: Math.max(8, insets.bottom + 8),
+            height: 72 + insets.bottom,
+          },
+          tabBarLabelStyle: {
+            marginTop: 4,
+            fontSize: 11,
+          },
+        }}>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Tasks',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="check-circle-outline" size={28} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => {
+              if (showMoreModal) {
+                setShowMoreModal(false);
+              }
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="diet"
+          options={{
+            title: 'Diet',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="restaurant" size={28} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => {
+              if (showMoreModal) {
+                setShowMoreModal(false);
+              }
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="exercise"
+          options={{
+            title: 'Exercise',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="fitness-center" size={28} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => {
+              if (showMoreModal) {
+                setShowMoreModal(false);
+              }
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="more"
+          options={{
+            title: 'More',
+            tabBarIcon: ({ color }) => (
+              <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                <MaterialIcons
+                  name={showMoreModal ? "close" : "keyboard-arrow-up"}
+                  size={28}
+                  color={showMoreModal ? Colors[colorScheme ?? 'light'].tint : color}
+                />
+              </Animated.View>
+            ),
+          }}
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              setShowMoreModal(!showMoreModal);
+            },
+          }}
+        />
+      </Tabs>
+
+      <MoreOptionsModal
+        visible={showMoreModal}
+        onClose={() => setShowMoreModal(false)}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
