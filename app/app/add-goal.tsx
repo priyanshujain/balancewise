@@ -22,17 +22,12 @@ export default function AddGoalScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
         <View className="flex-1 p-6">
-          {/* Header */}
-          <Text className="text-2xl font-bold mb-6" style={{ color: colors.text }}>
-            Daily Goals
-          </Text>
-
           {/* Quote */}
           <Text className="text-base italic text-center mb-8" style={{ color: colors.text }}>
             &ldquo;with better habits, anything is possible&rdquo;
@@ -40,30 +35,36 @@ export default function AddGoalScreen() {
 
           {/* Input section */}
           <View className="flex-1">
-            <Text className="text-sm mb-2" style={{ color: colors.icon }}>
+            <Text className="text-sm mb-3" style={{ color: colors.icon }}>
               What must be done?
             </Text>
-            <View className="flex-row items-center pb-2" style={{ borderBottomWidth: 2, borderBottomColor: colors.border }}>
-              <TextInput
-                className="flex-1 text-base"
-                style={{ color: colors.text }}
-                placeholder="Drink 5 litre of water every day"
-                placeholderTextColor={colors.icon}
-                value={goalText}
-                onChangeText={setGoalText}
-                autoFocus
-                multiline
-                onSubmitEditing={handleAddGoal}
-              />
-              <Pressable
-                className="w-12 h-12 rounded-full items-center justify-center ml-3"
-                style={{ backgroundColor: colors.tint }}
-                onPress={handleAddGoal}
-                disabled={!goalText.trim()}
-              >
-                <MaterialIcons name="arrow-forward" size={24} color="#FFFFFF" />
-              </Pressable>
-            </View>
+            <TextInput
+              className="rounded-xl p-4 mb-4 text-base"
+              style={{
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                color: colors.text,
+                minHeight: 60,
+                paddingTop: 16,
+                textAlignVertical: 'top'
+              }}
+              placeholder="Drink 5 litre of water every day"
+              placeholderTextColor={colors.icon}
+              value={goalText}
+              onChangeText={setGoalText}
+              autoFocus
+              multiline
+            />
+
+            <Pressable
+              className="w-14 h-14 rounded-full items-center justify-center self-end"
+              style={{ backgroundColor: colors.tint }}
+              onPress={handleAddGoal}
+              disabled={!goalText.trim()}
+            >
+              <MaterialIcons name="arrow-forward" size={28} color={colors.background} />
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>

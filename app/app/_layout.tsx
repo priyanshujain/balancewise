@@ -39,7 +39,14 @@ function RootLayoutNav() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
-        <Stack.Screen name="add-goal" options={{ presentation: 'modal', title: 'Add Goal', headerShown: false }} />
+        <Stack.Screen
+          name="add-goal"
+          options={{
+            presentation: 'modal',
+            title: 'New Goal',
+            headerShown: true
+          }}
+        />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
