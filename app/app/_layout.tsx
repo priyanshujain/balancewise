@@ -7,6 +7,7 @@ import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { GoalsProvider } from '@/contexts/goals-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -38,6 +39,7 @@ function RootLayoutNav() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="add-goal" options={{ presentation: 'modal', title: 'Add Goal', headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
@@ -48,7 +50,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <GoalsProvider>
+        <RootLayoutNav />
+      </GoalsProvider>
     </AuthProvider>
   );
 }
