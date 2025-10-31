@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { Pressable, ActivityIndicator, Alert, Image, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { apiService } from '@/services/api';
 import { Colors } from '@/constants/theme';
@@ -115,103 +115,59 @@ export default function SignInScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.content}>
-        <ThemedText type="title" style={styles.title}>
+    <SafeAreaView
+      className="flex-1 items-center justify-center"
+      style={{ backgroundColor: colors.yellow }}
+      edges={['top', 'bottom']}
+    >
+      <View className="w-full max-w-md items-center px-5">
+        <Image
+          source={require('@/assets/images/icon.png')}
+          style={{ width: 100, height: 100, marginBottom: 24 }}
+          resizeMode="contain"
+        />
+        <ThemedText
+          className="text-4xl font-bold mb-3 text-center"
+          lightColor="#11181C"
+          darkColor="#11181C"
+        >
           Welcome to BalanceWise
         </ThemedText>
-        <ThemedText style={styles.subtitle}>
+        <ThemedText
+          className="text-base mb-10 text-center opacity-70"
+          lightColor="#11181C"
+          darkColor="#11181C"
+        >
           Sign in with your Google account to continue
         </ThemedText>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.googleButton,
-            {
-              backgroundColor: colors.tint,
-              opacity: pressed || isLoading ? 0.8 : 1
-            },
-          ]}
+          className="items-center justify-center active:opacity-70"
           onPress={handleSignIn}
-          disabled={isLoading}>
+          disabled={isLoading}
+          style={{ width: 320, height: 56 }}>
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#3c4043" />
           ) : (
-            <>
-              <ThemedView style={styles.googleIconContainer}>
-                <ThemedText style={styles.googleIcon}>G</ThemedText>
-              </ThemedView>
-              <ThemedText style={styles.buttonText}>Sign in with Google</ThemedText>
-            </>
+            <Image
+              source={require('@/assets/images/google-signin.png')}
+              style={{ width: 320, height: 56 }}
+              resizeMode="contain"
+            />
           )}
         </Pressable>
 
         {statusMessage && (
-          <ThemedText style={styles.statusMessage}>{statusMessage}</ThemedText>
+          <ThemedText
+            className="mt-5 text-sm opacity-70 text-center"
+            lightColor="#11181C"
+            darkColor="#11181C"
+          >
+            {statusMessage}
+          </ThemedText>
         )}
-      </ThemedView>
-    </ThemedView>
+      </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 40,
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    width: '100%',
-    maxWidth: 320,
-    minHeight: 50,
-  },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  googleIcon: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4285F4',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statusMessage: {
-    marginTop: 20,
-    fontSize: 14,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-});

@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, Pressable, StyleSheet, Animated } from 'r
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 interface MoreOption {
   id: string;
@@ -24,6 +26,8 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
   const slideAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const modalBottom = 72 + insets.bottom;
 
@@ -94,6 +98,8 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
           {
             bottom: modalBottom,
             transform: [{ translateY }],
+            backgroundColor: colors.background,
+            borderColor: colors.border,
           },
         ]}
         pointerEvents="auto"
@@ -109,10 +115,10 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
                 <MaterialIcons
                   name={option.icon as any}
                   size={28}
-                  color="#6B7280"
+                  color={colors.icon}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionLabel}>
+                <Text style={[styles.optionLabel, { color: colors.text }]}>
                   {option.label}
                 </Text>
               </TouchableOpacity>
@@ -138,9 +144,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     maxHeight: '60%',
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    borderTopWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -148,7 +154,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 3,
-    elevation: 0,
+    elevation: 5,
   },
   contentContainer: {
     paddingHorizontal: 24,
@@ -169,6 +175,5 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 11,
     textAlign: 'center',
-    color: '#4B5563',
   },
 });
