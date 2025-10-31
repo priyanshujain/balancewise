@@ -103,14 +103,18 @@ export default function TasksScreen() {
           {/* Empty state or progress */}
           {goals.length === 0 ? (
             <Pressable
-              className="rounded-lg p-4 flex-row items-center justify-center mt-4"
-              style={{ borderWidth: 1, borderColor: colors.border }}
+              className="rounded-lg py-3 px-4 flex-row items-center justify-center mt-4"
+              style={{
+                backgroundColor: colors.background,
+                borderWidth: 2,
+                borderColor: colors.tint
+              }}
               onPress={() => router.push('/add-goal')}
             >
-              <Text className="text-base font-medium" style={{ color: colors.text }}>
-                Add Your First Daily Goal
+              <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                Add Your First Goal
               </Text>
-              <Text className="text-base"> 🎯</Text>
+              <Text className="text-sm"> 🎯</Text>
             </Pressable>
           ) : (
             <View className="mt-4">
