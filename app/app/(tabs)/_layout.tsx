@@ -46,7 +46,7 @@ export default function TabLayout() {
           },
         }}>
         <Tabs.Screen
-          name="tasks"
+          name="index"
           options={{
             title: 'Tasks',
             tabBarIcon: ({ color }) => (
@@ -112,18 +112,6 @@ export default function TabLayout() {
               e.preventDefault();
               setShowMoreModal(!showMoreModal);
             },
-          }}
-        />
-        <Tabs.Screen
-          name="index"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="explore"
-          options={{
-            href: null,
           }}
         />
       </Tabs>

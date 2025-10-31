@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 interface MoreOption {
   id: string;
@@ -24,9 +25,21 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
-  // Modal should sit flush against the tab bar
-  // Tab bar height matches _layout.tsx: 72 + insets.bottom
   const modalBottom = 72 + insets.bottom;
+
+  const handleOptionPress = (optionId: string) => {
+    onClose();
+
+    switch (optionId) {
+      case 'profile':
+        router.push('/profile');
+        break;
+      case 'help':
+        break;
+      default:
+        break;
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -91,7 +104,7 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
               <TouchableOpacity
                 key={option.id}
                 style={styles.optionItem}
-                onPress={onClose}
+                onPress={() => handleOptionPress(option.id)}
               >
                 <MaterialIcons
                   name={option.icon as any}
