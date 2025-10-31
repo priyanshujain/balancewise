@@ -1,6 +1,7 @@
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
@@ -12,6 +13,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const [showMoreModal, setShowMoreModal] = useState(false);
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     Animated.timing(rotateAnim, {
@@ -35,8 +37,8 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
           tabBarStyle: {
             paddingTop: 8,
-            paddingBottom: 8,
-            height: 72,
+            paddingBottom: Math.max(8, insets.bottom + 8),
+            height: 72 + insets.bottom,
           },
           tabBarLabelStyle: {
             marginTop: 4,

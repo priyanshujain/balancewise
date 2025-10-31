@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MoreOption {
   id: string;
@@ -21,6 +22,11 @@ const moreOptions: MoreOption[] = [
 export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalProps) {
   const slideAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+
+  // Modal should sit flush against the tab bar
+  // Tab bar height matches _layout.tsx: 72 + insets.bottom
+  const modalBottom = 72 + insets.bottom;
 
   useEffect(() => {
     if (visible) {
@@ -62,28 +68,30 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
   return (
     <View style={styles.container} pointerEvents="box-none">
       <Pressable
-        style={[styles.backdrop, { opacity: opacityAnim }]}
+        style={[StyleSheet.absoluteFillObject, { bottom: modalBottom }]}
         onPress={onClose}
         pointerEvents="auto"
-      />
+      >
+        <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]} />
+      </Pressable>
 
       <Animated.View
         style={[
           styles.modalContent,
-          { transform: [{ translateY }] },
+          {
+            bottom: modalBottom,
+            transform: [{ translateY }],
+          },
         ]}
         pointerEvents="auto"
       >
         <View style={styles.contentContainer}>
-          <View className="flex-row flex-wrap">
+          <View style={styles.optionsGrid}>
             {moreOptions.map((option) => (
               <TouchableOpacity
                 key={option.id}
                 style={styles.optionItem}
-                onPress={() => {
-                  console.log(`${option.label} pressed`);
-                  onClose();
-                }}
+                onPress={onClose}
               >
                 <MaterialIcons
                   name={option.icon as any}
@@ -106,21 +114,14 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
     zIndex: 1000,
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 100,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 1,
   },
   modalContent: {
     position: 'absolute',
-    bottom: 100,
     left: 0,
     right: 0,
     maxHeight: '60%',
@@ -130,15 +131,19 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -3,
+      height: -4,
     },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
-    elevation: 6,
-    zIndex: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 0,
   },
   contentContainer: {
     paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   optionItem: {
     width: '25%',
