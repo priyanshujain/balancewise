@@ -91,7 +91,7 @@ export default function TasksScreen() {
           {/* Quote */}
           <View className="mb-8">
             <Text className="text-base italic text-center leading-6" style={{ color: colors.text }}>
-              "{quote.text}"
+              &ldquo;{quote.text}&rdquo;
             </Text>
             {quote.author && (
               <Text className="text-sm text-center mt-2" style={{ color: colors.icon }}>
@@ -116,7 +116,7 @@ export default function TasksScreen() {
             <View className="mt-4">
               {/* Progress section */}
               <Text className="text-xl font-semibold mb-4" style={{ color: colors.text }}>
-                Today's progress
+                Today&apos;s progress
               </Text>
 
               {/* Progress bar */}

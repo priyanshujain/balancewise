@@ -35,7 +35,7 @@ export default function AddGoalScreen() {
 
           {/* Quote */}
           <Text className="text-base italic text-center mb-8" style={{ color: colors.text }}>
-            "with better habits, anything is possible"
+            &ldquo;with better habits, anything is possible&rdquo;
           </Text>
 
           {/* Input section */}
