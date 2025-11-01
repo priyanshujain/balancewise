@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, Pressable, Modal, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Exercise } from '@/types/exercise';
 import { useState } from 'react';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,6 +21,7 @@ export function ExerciseDetailModal({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
 
   if (!exercise) return null;
 
@@ -35,7 +36,7 @@ export function ExerciseDetailModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1" style={{ backgroundColor: colors.background, paddingTop: insets.top }}>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
 
         <View className="flex-row items-center justify-between px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -117,7 +118,7 @@ export function ExerciseDetailModal({
             )}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
