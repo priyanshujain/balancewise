@@ -35,14 +35,14 @@ export function WorkoutPlayer({
   const [showExerciseModal, setShowExerciseModal] = useState(false);
 
   useEffect(() => {
-    if (state.isPaused || state.isOnBreak) return;
+    if (state.isPaused) return;
 
     const timer = setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [state.isPaused, state.isOnBreak]);
+  }, [state.isPaused]);
 
   useEffect(() => {
     if (!state.isOnBreak) return;

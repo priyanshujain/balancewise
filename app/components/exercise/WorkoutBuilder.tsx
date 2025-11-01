@@ -66,17 +66,22 @@ export function WorkoutBuilder({ workout, onSave, onCancel }: WorkoutBuilderProp
   });
 
   useEffect(() => {
-    if (workout?.exercises) {
-      setExercises(
-        workout.exercises.map(we => ({
-          exercise: we.exercise!,
-          sets: Array.from({ length: we.sets }, () => ({
-            reps: we.reps,
-            weightKg: we.weightKg,
-          })),
-          breakSeconds: we.breakSeconds,
-        }))
-      );
+    if (workout) {
+      setName(workout.name);
+      setScheduleDays(workout.scheduleDays);
+
+      if (workout.exercises) {
+        setExercises(
+          workout.exercises.map(we => ({
+            exercise: we.exercise!,
+            sets: Array.from({ length: we.sets }, () => ({
+              reps: we.reps,
+              weightKg: we.weightKg,
+            })),
+            breakSeconds: we.breakSeconds,
+          }))
+        );
+      }
     }
   }, [workout]);
 

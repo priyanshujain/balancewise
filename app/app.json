@@ -17,7 +17,8 @@
         "foregroundImage": "./assets/images/app-icon.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.priyanshujain.balancewise"
     },
     "web": {
       "output": "static",

@@ -53,6 +53,7 @@ function workoutSessionReducer(
         breakTimeRemaining: 0,
         isPaused: false,
         completedSets: [],
+        setStartTime: new Date(),
       };
 
     case 'COMPLETE_SET': {
@@ -73,6 +74,7 @@ function workoutSessionReducer(
           currentSetNumber: 1,
           isOnBreak: true,
           breakTimeRemaining: currentExercise.breakSeconds,
+          setStartTime: null, // Will be set when break ends
         };
       }
 
@@ -81,6 +83,7 @@ function workoutSessionReducer(
         currentSetNumber: state.currentSetNumber + 1,
         isOnBreak: true,
         breakTimeRemaining: currentExercise.breakSeconds,
+        setStartTime: null, // Will be set when break ends
       };
     }
 
@@ -99,6 +102,7 @@ function workoutSessionReducer(
         ...state,
         isOnBreak: false,
         breakTimeRemaining: 0,
+        setStartTime: new Date(), // Start timing the new set
       };
 
     case 'TICK_BREAK':
@@ -109,6 +113,7 @@ function workoutSessionReducer(
           ...state,
           isOnBreak: false,
           breakTimeRemaining: 0,
+          setStartTime: new Date(), // Start timing the new set
         };
       }
       return {
@@ -147,13 +152,21 @@ export function WorkoutSessionProvider({ children }: { children: ReactNode }) {
 
     const currentExercise = state.workout.exercises[state.currentExerciseIndex];
 
+    // Calculate actual duration of this set
+    let actualDuration: number | undefined;
+    if (state.setStartTime) {
+      actualDuration = Math.floor(
+        (new Date().getTime() - state.setStartTime.getTime()) / 1000
+      );
+    }
+
     await addSetCompletion({
       sessionId: state.session.id,
       workoutExerciseId: currentExercise.id,
       setNumber: state.currentSetNumber,
       repsCompleted: currentExercise.reps,
       weightKg: currentExercise.weightKg,
-      durationSeconds: currentExercise.durationSeconds,
+      durationSeconds: actualDuration,
     });
 
     dispatch({ type: 'COMPLETE_SET' });

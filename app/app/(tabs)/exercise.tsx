@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { useState, useCallback, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,10 +71,50 @@ export default function ExerciseScreen() {
   };
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return 'N/A';
+    if (!seconds) return '0s';
+    if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}min`;
+  };
+
+  const formatSessionDate = (date: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const sessionDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const time = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    if (sessionDate.getTime() === today.getTime()) {
+      return `today at ${time}`;
+    } else if (sessionDate.getTime() === yesterday.getTime()) {
+      return `yesterday at ${time}`;
+    } else {
+      const dateStr = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return `${dateStr} at ${time}`;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'finished_early':
+        return 'Finished Early';
+      case 'abandoned':
+        return 'Abandoned';
+      default:
+        return status.toUpperCase();
+    }
   };
 
   const handleTabPress = (index: number) => {
@@ -169,6 +209,27 @@ export default function ExerciseScreen() {
                   <Text className="text-sm mb-3" style={{ color: colors.icon }} numberOfLines={2}>
                     {workout.exercises.map(e => e.exercise?.name).filter(Boolean).join(', ')}
                   </Text>
+                  {workout.scheduleDays.length > 0 && (
+                    <View className="flex-row flex-wrap gap-2 mb-3">
+                      {workout.scheduleDays.map(day => {
+                        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        return (
+                          <View
+                            key={day}
+                            className="px-2 py-1 rounded"
+                            style={{ backgroundColor: colors.tint + '20' }}
+                          >
+                            <Text
+                              className="text-xs font-medium"
+                              style={{ color: colors.tint }}
+                            >
+                              {dayNames[day]}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                   <Pressable
                     className="rounded-lg py-3 items-center"
                     style={{ backgroundColor: colors.tint }}
@@ -193,60 +254,62 @@ export default function ExerciseScreen() {
           )}
         </View>
 
-        <View key="1" className="flex-1 px-6">
+        <View key="1" className="flex-1">
           {loading ? (
             <View className="flex-1 items-center justify-center">
               <ActivityIndicator size="large" color={colors.tint} />
             </View>
           ) : sessions.length === 0 ? (
-            <View className="items-center justify-center py-12">
+            <View className="flex-1 items-center justify-center px-6">
               <Text className="text-base" style={{ color: colors.icon }}>
                 No workout history yet
               </Text>
             </View>
           ) : (
-            sessions.map(session => (
-              <View
-                key={session.id}
-                className="mb-4 rounded-lg p-4"
-                style={{ backgroundColor: colors.card }}
-              >
-                <Text className="text-base font-semibold mb-2" style={{ color: colors.text }}>
-                  {session.startedAt.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-sm" style={{ color: colors.icon }}>
-                    {session.startedAt.toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {formatDuration(session.durationSeconds)}
-                  </Text>
-                  <View
-                    className="px-2 py-1 rounded"
-                    style={{
-                      backgroundColor:
-                        session.status === 'completed' ? colors.tint + '20' : colors.icon + '20',
-                    }}
-                  >
-                    <Text
-                      className="text-xs font-medium"
+            <ScrollView
+              className="flex-1 px-6"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
+              {sessions.map(session => (
+                <Pressable
+                  key={session.id}
+                  className="mb-4 rounded-lg p-4"
+                  style={{ backgroundColor: colors.card }}
+                  onPress={() => router.push(`/exercise/session-details?sessionId=${session.id}`)}
+                >
+                  <View className="flex-row items-start justify-between mb-3">
+                    <Text className="text-lg font-semibold flex-1 mr-2" style={{ color: colors.text }}>
+                      {session.workout?.name || 'Workout'}
+                    </Text>
+                    <View
+                      className="px-2 py-1 rounded"
                       style={{
-                        color: session.status === 'completed' ? colors.tint : colors.icon,
+                        backgroundColor:
+                          session.status === 'completed' ? colors.tint + '20' : colors.icon + '20',
                       }}
                     >
-                      {session.status.toUpperCase()}
+                      <Text
+                        className="text-xs font-medium"
+                        style={{
+                          color: session.status === 'completed' ? colors.tint : colors.icon,
+                        }}
+                      >
+                        {getStatusLabel(session.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-sm" style={{ color: colors.icon }}>
+                      Time: {formatDuration(session.durationSeconds)}
+                    </Text>
+                    <Text className="text-sm" style={{ color: colors.icon }}>
+                      {formatSessionDate(session.startedAt)}
                     </Text>
                   </View>
-                </View>
-              </View>
-            ))
+                </Pressable>
+              ))}
+            </ScrollView>
           )}
         </View>
       </PagerView>

@@ -79,4 +79,5 @@ export interface ActiveWorkoutState {
   breakTimeRemaining: number;
   isPaused: boolean;
   completedSets: SessionSet[];
+  setStartTime: Date | null;
 }

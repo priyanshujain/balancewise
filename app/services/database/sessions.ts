@@ -107,7 +107,26 @@ export async function getSessionById(sessionId: string): Promise<WorkoutSession 
     completed_at: string | null;
     duration_seconds: number | null;
     status: string;
-  }>('SELECT * FROM workout_sessions WHERE id = ?', sessionId);
+    workout_name: string | null;
+    workout_description: string | null;
+    workout_schedule_days: string | null;
+    workout_reminder_time: string | null;
+    workout_created_at: string | null;
+    workout_updated_at: string | null;
+  }>(
+    `SELECT
+      ws.*,
+      w.name as workout_name,
+      w.description as workout_description,
+      w.schedule_days as workout_schedule_days,
+      w.reminder_time as workout_reminder_time,
+      w.created_at as workout_created_at,
+      w.updated_at as workout_updated_at
+     FROM workout_sessions ws
+     LEFT JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.id = ?`,
+    sessionId
+  );
 
   if (!result) return null;
 
@@ -118,6 +137,15 @@ export async function getSessionById(sessionId: string): Promise<WorkoutSession 
     completedAt: result.completed_at ? new Date(result.completed_at) : undefined,
     durationSeconds: result.duration_seconds || undefined,
     status: result.status as WorkoutStatus,
+    workout: result.workout_name ? {
+      id: result.workout_id,
+      name: result.workout_name,
+      description: result.workout_description || undefined,
+      scheduleDays: result.workout_schedule_days ? JSON.parse(result.workout_schedule_days) : [],
+      reminderTime: result.workout_reminder_time || undefined,
+      createdAt: new Date(result.workout_created_at!),
+      updatedAt: new Date(result.workout_updated_at!),
+    } : undefined,
   };
 }
 
@@ -163,10 +191,20 @@ export async function getSessionSets(sessionId: string): Promise<SessionSet[]> {
     weight_kg: number | null;
     duration_seconds: number | null;
     completed_at: string;
+    exercise_id: string | null;
+    exercise_name: string | null;
+    exercise_category: string | null;
   }>(
-    `SELECT * FROM session_sets
-     WHERE session_id = ?
-     ORDER BY completed_at ASC`,
+    `SELECT
+      ss.*,
+      e.id as exercise_id,
+      e.name as exercise_name,
+      e.category as exercise_category
+     FROM session_sets ss
+     LEFT JOIN workout_exercises we ON ss.workout_exercise_id = we.id
+     LEFT JOIN exercises e ON we.exercise_id = e.id
+     WHERE ss.session_id = ?
+     ORDER BY ss.completed_at ASC`,
     sessionId
   );
 
@@ -179,6 +217,26 @@ export async function getSessionSets(sessionId: string): Promise<SessionSet[]> {
     weightKg: row.weight_kg || undefined,
     durationSeconds: row.duration_seconds || undefined,
     completedAt: new Date(row.completed_at),
+    workoutExercise: row.exercise_id ? {
+      id: row.workout_exercise_id,
+      workoutId: '',
+      exerciseId: row.exercise_id,
+      orderIndex: 0,
+      sets: 0,
+      reps: 0,
+      breakSeconds: 30,
+      exercise: {
+        id: row.exercise_id,
+        slug: '',
+        name: row.exercise_name!,
+        category: row.exercise_category as any,
+        musclesAffected: [],
+        images: [],
+        breakSeconds: 30,
+        requiresWeight: false,
+        createdAt: new Date(),
+      },
+    } : undefined,
   }));
 }
 
@@ -226,9 +284,24 @@ export async function getRecentSessions(limit: number = 20): Promise<WorkoutSess
     completed_at: string | null;
     duration_seconds: number | null;
     status: string;
+    workout_name: string | null;
+    workout_description: string | null;
+    workout_schedule_days: string | null;
+    workout_reminder_time: string | null;
+    workout_created_at: string | null;
+    workout_updated_at: string | null;
   }>(
-    `SELECT * FROM workout_sessions
-     ORDER BY started_at DESC
+    `SELECT
+      ws.*,
+      w.name as workout_name,
+      w.description as workout_description,
+      w.schedule_days as workout_schedule_days,
+      w.reminder_time as workout_reminder_time,
+      w.created_at as workout_created_at,
+      w.updated_at as workout_updated_at
+     FROM workout_sessions ws
+     LEFT JOIN workouts w ON ws.workout_id = w.id
+     ORDER BY ws.started_at DESC
      LIMIT ?`,
     limit
   );
@@ -240,5 +313,14 @@ export async function getRecentSessions(limit: number = 20): Promise<WorkoutSess
     completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
     durationSeconds: row.duration_seconds || undefined,
     status: row.status as WorkoutStatus,
+    workout: row.workout_name ? {
+      id: row.workout_id,
+      name: row.workout_name,
+      description: row.workout_description || undefined,
+      scheduleDays: row.workout_schedule_days ? JSON.parse(row.workout_schedule_days) : [],
+      reminderTime: row.workout_reminder_time || undefined,
+      createdAt: new Date(row.workout_created_at!),
+      updatedAt: new Date(row.workout_updated_at!),
+    } : undefined,
   }));
 }
