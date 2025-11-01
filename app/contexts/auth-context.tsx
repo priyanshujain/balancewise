@@ -1,12 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { db } from '@/services/database';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-}
+import { initDatabase, getAuth, saveAuth, deleteAuth, User } from '@/services/database';
 
 interface AuthContextType {
   user: User | null;
@@ -30,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const initializeAuth = async () => {
     try {
       // Initialize database
-      await db.init();
+      await initDatabase();
 
       // Load stored auth data
       await loadStoredAuth();
@@ -42,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const authData = await db.getAuth();
+      const authData = await getAuth();
 
       if (authData) {
         setToken(authData.token);
@@ -61,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (authToken: string, userData: User) => {
     try {
       // Save to database
-      await db.saveAuth(authToken, userData);
+      await saveAuth(authToken, userData);
 
       // Update state
       setToken(authToken);
@@ -77,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       // Delete from database
-      await db.deleteAuth();
+      await deleteAuth();
 
       // Clear state
       setToken(null);
