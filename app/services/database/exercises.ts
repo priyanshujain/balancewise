@@ -1,5 +1,5 @@
 import { Exercise, ExerciseCategory } from '@/types/exercise';
-import { getDatabase, initDatabase } from './index';
+import { getDatabase, initDatabase } from './connection';
 
 export async function getAllExercises(): Promise<Exercise[]> {
   await initDatabase();

@@ -1,5 +1,5 @@
 import { Workout, WorkoutExercise, WorkoutWithExercises, ExerciseCategory } from '@/types/exercise';
-import { getDatabase, initDatabase } from './index';
+import { getDatabase, initDatabase } from './connection';
 
 export async function createWorkout(
   workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>

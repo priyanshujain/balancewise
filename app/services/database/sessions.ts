@@ -1,5 +1,5 @@
 import { WorkoutSession, SessionSet, WorkoutStatus } from '@/types/exercise';
-import { getDatabase, initDatabase } from './index';
+import { getDatabase, initDatabase } from './connection';
 
 export async function startWorkoutSession(workoutId: string): Promise<WorkoutSession> {
   await initDatabase();

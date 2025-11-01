@@ -1,4 +1,4 @@
-import { getDatabase, initDatabase } from './index';
+import { getDatabase, initDatabase } from './connection';
 
 export interface User {
   id: string;
