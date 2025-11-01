@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import PagerView from 'react-native-pager-view';
+import PagerView from '@/components/ui/PagerView';
 import { WorkoutWithExercises, WorkoutSession } from '@/types/exercise';
 import { getAllWorkouts, getWorkoutWithExercises, getRecentSessions } from '@/services/database';
 import { useWorkoutSession } from '@/contexts/WorkoutSessionContext';
