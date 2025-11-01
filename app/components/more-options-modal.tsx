@@ -34,15 +34,18 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
   const handleOptionPress = (optionId: string) => {
     onClose();
 
-    switch (optionId) {
-      case 'profile':
-        router.push('/profile');
-        break;
-      case 'help':
-        break;
-      default:
-        break;
-    }
+    // Small delay to allow modal to close before navigating
+    setTimeout(() => {
+      switch (optionId) {
+        case 'profile':
+          router.push('/profile');
+          break;
+        case 'help':
+          break;
+        default:
+          break;
+      }
+    }, 250);
   };
 
   useEffect(() => {
