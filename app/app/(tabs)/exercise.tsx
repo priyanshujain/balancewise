@@ -21,10 +21,13 @@ export default function ExerciseScreen() {
   const [activeTab, setActiveTab] = useState(0);
   const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [workoutsLoaded, setWorkoutsLoaded] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithExercises | null>(null);
 
-  const loadWorkouts = useCallback(async () => {
+  const loadWorkouts = useCallback(async (force = false) => {
+    if (workoutsLoaded && !force) return;
     setLoading(true);
     try {
       const workoutList = await getAllWorkouts();
@@ -32,24 +35,27 @@ export default function ExerciseScreen() {
         workoutList.map(w => getWorkoutWithExercises(w.id))
       );
       setWorkouts(workoutsWithExercises.filter(Boolean) as WorkoutWithExercises[]);
+      setWorkoutsLoaded(true);
     } catch (error) {
       console.error('Failed to load workouts:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workoutsLoaded]);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (force = false) => {
+    if (historyLoaded && !force) return;
     setLoading(true);
     try {
       const recentSessions = await getRecentSessions(20);
       setSessions(recentSessions);
+      setHistoryLoaded(true);
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [historyLoaded]);
 
   useFocusEffect(
     useCallback(() => {
