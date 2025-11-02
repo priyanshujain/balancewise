@@ -1,53 +1,83 @@
 {
-  "expo": {
-    "name": "BalanceWise",
-    "slug": "balancewise",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
-    "scheme": "BalanceWise",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#FFC107",
-        "foregroundImage": "./assets/images/app-icon.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/app-icon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/app-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#FFC107",
-          "dark": {
-            "backgroundColor": "#FFC107"
-          }
-        }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "e14a73df-e01a-438c-b865-750ecf3e2bfb"
-      }
-    },
-    "owner": "priyanshujain"
-  }
+    "expo": {
+        "name": "BalanceWise",
+        "slug": "balancewise",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/images/app-icon.png",
+        "scheme": "BalanceWise",
+        "userInterfaceStyle": "automatic",
+        "newArchEnabled": true,
+        "splash": {
+            "image": "./assets/images/app-icon.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#FF7043"
+        },
+        "ios": {
+            "supportsTablet": true,
+            "infoPlist": {
+                "NSCameraUsageDescription": "BalanceWise needs access to your camera to capture receipts and documents.",
+                "NSPhotoLibraryUsageDescription": "BalanceWise needs access to your photo library to select receipts and documents."
+            },
+            "bundleIdentifier": "com.kush636.balancewise"
+        },
+        "android": {
+            "adaptiveIcon": {
+                "backgroundColor": "#FF7043",
+                "foregroundImage": "./assets/images/app-icon.png"
+            },
+            "splash": {
+                "image": "./assets/images/app-icon.png",
+                "resizeMode": "contain",
+                "backgroundColor": "#FF7043",
+                "mdpi": "./assets/images/app-icon.png",
+                "hdpi": "./assets/images/app-icon.png",
+                "xhdpi": "./assets/images/app-icon.png",
+                "xxhdpi": "./assets/images/app-icon.png",
+                "xxxhdpi": "./assets/images/app-icon.png"
+            },
+            "edgeToEdgeEnabled": true,
+            "predictiveBackGestureEnabled": false,
+            "permissions": [
+                "android.permission.RECORD_AUDIO"
+            ],
+            "package": "com.kush636.balancewise"
+        },
+        "web": {
+            "output": "static",
+            "favicon": "./assets/images/app-icon.png"
+        },
+        "plugins": [
+            "expo-router", [
+                "expo-splash-screen",
+                {
+                    "image": "./assets/images/app-icon.png",
+                    "imageWidth": 200,
+                    "resizeMode": "contain",
+                    "backgroundColor": "#FF7043",
+                    "dark": {
+                        "backgroundColor": "#FF7043"
+                    }
+                }
+            ],
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "BalanceWise needs access to your photo library.",
+                    "cameraPermission": "BalanceWise needs access to your camera"
+                }
+            ]
+        ],
+        "experiments": {
+            "typedRoutes": true,
+            "reactCompiler": true
+        },
+        "extra": {
+            "router": {},
+            "eas": {
+                "projectId": "e14a73df-e01a-438c-b865-750ecf3e2bfb"
+            }
+        },
+        "owner": "priyanshujain"
+    }
 }
