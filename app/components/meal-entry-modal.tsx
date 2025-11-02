@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,17 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ActionSheet } from '@/components/action-sheet';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export interface MealData {
-  id: string;
-  imageUri: string;
-  description: string;
-  calories: string;
-  protein: string;
-  carbs: string;
-  fat: string;
-  timestamp: number;
-}
+import type { MealData } from '@/services/database/meals';
 
 interface MealEntryModalProps {
   visible: boolean;
@@ -67,6 +58,27 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
     }
   }, [editMeal]);
 
+  const compressImage = async (uri: string): Promise<string> => {
+    console.log('Compressing image...');
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1000 } }], // Resize to 1000px width, maintains aspect ratio
+        {
+          compress: 0.7, // 70% quality - good balance between size and quality
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      console.log('Image compressed successfully. Original:', uri);
+      console.log('Compressed:', manipResult.uri);
+      return manipResult.uri;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      // If compression fails, return original
+      return uri;
+    }
+  };
+
   const pickImageFromGallery = async () => {
     console.log('pickImageFromGallery called');
     setIsPickingImage(true);
@@ -89,8 +101,12 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
 
     if (!result.canceled && result.assets[0]) {
       const imageUri = result.assets[0].uri;
-      console.log('Setting selected image to:', imageUri);
-      setSelectedImage(imageUri);
+      console.log('Gallery image selected:', imageUri);
+
+      // Compress the image
+      const compressedUri = await compressImage(imageUri);
+      console.log('Setting selected image to compressed version:', compressedUri);
+      setSelectedImage(compressedUri);
       console.log('State update called');
     } else {
       console.log('Image selection was cancelled or no assets');
@@ -120,8 +136,12 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
 
     if (!result.canceled && result.assets[0]) {
       const imageUri = result.assets[0].uri;
-      console.log('Setting camera image to:', imageUri);
-      setSelectedImage(imageUri);
+      console.log('Camera image captured:', imageUri);
+
+      // Compress the image
+      const compressedUri = await compressImage(imageUri);
+      console.log('Setting selected image to compressed version:', compressedUri);
+      setSelectedImage(compressedUri);
       console.log('State update called');
     } else {
       console.log('Camera was cancelled or no assets');

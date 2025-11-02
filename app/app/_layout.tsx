@@ -8,6 +8,7 @@ import '../global.css';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { GoalsProvider } from '@/contexts/goals-context';
+import { initDatabase } from '@/services/database';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -55,6 +56,17 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  // Initialize database on app startup
+  useEffect(() => {
+    initDatabase()
+      .then(() => {
+        console.log('Database initialized successfully');
+      })
+      .catch((error) => {
+        console.error('Failed to initialize database:', error);
+      });
+  }, []);
+
   return (
     <AuthProvider>
       <GoalsProvider>

@@ -1,34 +1,41 @@
 import { useState } from 'react';
-import { StyleSheet, Pressable, FlatList } from 'react-native';
+import { StyleSheet, Pressable, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
-import { MealEntryModal, type MealData } from '@/components/meal-entry-modal';
+import { MealEntryModal } from '@/components/meal-entry-modal';
 import { MealCard } from '@/components/meal-card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useMeals } from '@/hooks/use-meals';
+import type { MealData } from '@/services/database/meals';
 
 export default function DietScreen() {
-  const [meals, setMeals] = useState<MealData[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState<MealData | null>(null);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const handleSaveMeal = (mealData: MealData) => {
-    if (editingMeal) {
-      // Update existing meal
-      setMeals((prevMeals) =>
-        prevMeals.map((meal) => (meal.id === mealData.id ? mealData : meal))
-      );
-    } else {
-      // Add new meal
-      setMeals((prevMeals) => [mealData, ...prevMeals]);
+  // Use the custom hook for database operations
+  const { meals, loading, addMeal, updateMeal, removeMeal } = useMeals();
+
+  const handleSaveMeal = async (mealData: MealData) => {
+    try {
+      if (editingMeal) {
+        // Update existing meal
+        await updateMeal(mealData);
+      } else {
+        // Add new meal
+        await addMeal(mealData);
+      }
+      setShowModal(false);
+      setEditingMeal(null);
+    } catch (error) {
+      console.error('Error saving meal:', error);
+      // Could show an error toast/alert here
     }
-    setShowModal(false);
-    setEditingMeal(null);
   };
 
   const handleEditMeal = (meal: MealData) => {
@@ -36,8 +43,13 @@ export default function DietScreen() {
     setShowModal(true);
   };
 
-  const handleDeleteMeal = (mealId: string) => {
-    setMeals((prevMeals) => prevMeals.filter((meal) => meal.id !== mealId));
+  const handleDeleteMeal = async (mealId: string) => {
+    try {
+      await removeMeal(mealId);
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      // Could show an error toast/alert here
+    }
   };
 
   const handleCloseModal = () => {
@@ -52,29 +64,38 @@ export default function DietScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <FlatList
-        data={meals}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MealCard
-            meal={item}
-            onEdit={handleEditMeal}
-            onDelete={handleDeleteMeal}
-          />
-        )}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <ThemedView style={styles.emptyContainer}>
-            <Ionicons name="restaurant-outline" size={64} color={colors.tabIconDefault} />
-            <ThemedText style={[styles.emptyText, { color: colors.tabIconDefault }]}>
-              No meals logged yet
-            </ThemedText>
-            <ThemedText style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
-              Tap the + button to add your first meal
-            </ThemedText>
-          </ThemedView>
-        }
-      />
+      {loading ? (
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <ThemedText style={[styles.loadingText, { color: colors.tabIconDefault }]}>
+            Loading meals...
+          </ThemedText>
+        </ThemedView>
+      ) : (
+        <FlatList
+          data={meals}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <MealCard
+              meal={item}
+              onEdit={handleEditMeal}
+              onDelete={handleDeleteMeal}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <ThemedView style={styles.emptyContainer}>
+              <Ionicons name="restaurant-outline" size={64} color={colors.tabIconDefault} />
+              <ThemedText style={[styles.emptyText, { color: colors.tabIconDefault }]}>
+                No meals logged yet
+              </ThemedText>
+              <ThemedText style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
+                Tap the + button to add your first meal
+              </ThemedText>
+            </ThemedView>
+          }
+        />
+      )}
 
       <Pressable
         style={[styles.fab, { backgroundColor: colors.tint }]}
@@ -96,6 +117,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     marginTop: 22
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
   listContent: {
     paddingTop: 16,

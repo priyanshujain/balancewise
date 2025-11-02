@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import type { MealData } from '@/components/meal-entry-modal';
+import type { MealData } from '@/services/database/meals';
 
 interface MealCardProps {
   meal: MealData;

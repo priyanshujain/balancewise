@@ -53,6 +53,20 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL
         );
+
+        -- Meals table
+        CREATE TABLE IF NOT EXISTS meals (
+          id TEXT PRIMARY KEY NOT NULL,
+          image_uri TEXT NOT NULL,
+          description TEXT,
+          calories TEXT,
+          protein TEXT,
+          carbs TEXT,
+          fat TEXT,
+          timestamp INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_meals_timestamp ON meals(timestamp DESC);
       `);
 
       console.log('Database initialized successfully');
@@ -94,3 +108,4 @@ export async function closeDatabase(): Promise<void> {
 // Re-export domain-specific operations
 export * from './auth';
 export * from './tasks';
+export * from './meals';
