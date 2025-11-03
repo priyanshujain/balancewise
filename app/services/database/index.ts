@@ -8,4 +8,4 @@ export * from './exercises';
 export * from './workouts';
 export * from './sessions';
 export * from './seed';
-export * from './meals';
+export * from './diet';

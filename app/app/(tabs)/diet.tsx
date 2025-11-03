@@ -8,57 +8,57 @@ import { MealEntryModal } from '@/components/meal-entry-modal';
 import { MealCard } from '@/components/meal-card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useMeals } from '@/hooks/use-meals';
-import type { MealData } from '@/services/database/meals';
+import { useDiet } from '@/hooks/use-diet';
+import type { DietEntry } from '@/services/database/diet';
 
 export default function DietScreen() {
   const [showModal, setShowModal] = useState(false);
-  const [editingMeal, setEditingMeal] = useState<MealData | null>(null);
+  const [editingEntry, setEditingEntry] = useState<DietEntry | null>(null);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   // Use the custom hook for database operations
-  const { meals, loading, addMeal, updateMeal, removeMeal } = useMeals();
+  const { dietEntries, loading, addDietEntry, updateDietEntry, removeDietEntry } = useDiet();
 
-  const handleSaveMeal = async (mealData: MealData) => {
+  const handleSaveEntry = async (entryData: DietEntry) => {
     try {
-      if (editingMeal) {
-        // Update existing meal
-        await updateMeal(mealData);
+      if (editingEntry) {
+        // Update existing entry
+        await updateDietEntry(entryData);
       } else {
-        // Add new meal
-        await addMeal(mealData);
+        // Add new entry
+        await addDietEntry(entryData);
       }
       setShowModal(false);
-      setEditingMeal(null);
+      setEditingEntry(null);
     } catch (error) {
-      console.error('Error saving meal:', error);
+      console.error('Error saving diet entry:', error);
       // Could show an error toast/alert here
     }
   };
 
-  const handleEditMeal = (meal: MealData) => {
-    setEditingMeal(meal);
+  const handleEditEntry = (entry: DietEntry) => {
+    setEditingEntry(entry);
     setShowModal(true);
   };
 
-  const handleDeleteMeal = async (mealId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
     try {
-      await removeMeal(mealId);
+      await removeDietEntry(entryId);
     } catch (error) {
-      console.error('Error deleting meal:', error);
+      console.error('Error deleting diet entry:', error);
       // Could show an error toast/alert here
     }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setEditingMeal(null);
+    setEditingEntry(null);
   };
 
   const handleAddNew = () => {
-    setEditingMeal(null);
+    setEditingEntry(null);
     setShowModal(true);
   };
 
@@ -68,18 +68,18 @@ export default function DietScreen() {
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
           <ThemedText style={[styles.loadingText, { color: colors.tabIconDefault }]}>
-            Loading meals...
+            Loading diet entries...
           </ThemedText>
         </ThemedView>
       ) : (
         <FlatList
-          data={meals}
+          data={dietEntries}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <MealCard
               meal={item}
-              onEdit={handleEditMeal}
-              onDelete={handleDeleteMeal}
+              onEdit={handleEditEntry}
+              onDelete={handleDeleteEntry}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -87,10 +87,10 @@ export default function DietScreen() {
             <ThemedView style={styles.emptyContainer}>
               <Ionicons name="restaurant-outline" size={64} color={colors.tabIconDefault} />
               <ThemedText style={[styles.emptyText, { color: colors.tabIconDefault }]}>
-                No meals logged yet
+                No diet entries logged yet
               </ThemedText>
               <ThemedText style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
-                Tap the + button to add your first meal
+                Tap the + button to add your first entry
               </ThemedText>
             </ThemedView>
           }
@@ -106,8 +106,8 @@ export default function DietScreen() {
       <MealEntryModal
         visible={showModal}
         onClose={handleCloseModal}
-        onSave={handleSaveMeal}
-        editMeal={editingMeal}
+        onSave={handleSaveEntry}
+        editMeal={editingEntry}
       />
     </ThemedView>
   );

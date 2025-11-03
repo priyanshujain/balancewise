@@ -117,8 +117,8 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_sessions_workout ON workout_sessions(workout_id);
         CREATE INDEX IF NOT EXISTS idx_sessions_date ON workout_sessions(started_at);
 
-        -- Meals table
-        CREATE TABLE IF NOT EXISTS meals (
+        -- Diet table
+        CREATE TABLE IF NOT EXISTS diet (
           id TEXT PRIMARY KEY NOT NULL,
           image_uri TEXT NOT NULL,
           description TEXT,
@@ -129,7 +129,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
           timestamp INTEGER NOT NULL
         );
 
-        CREATE INDEX IF NOT EXISTS idx_meals_timestamp ON meals(timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_diet_timestamp ON diet(timestamp DESC);
 
       `);
 

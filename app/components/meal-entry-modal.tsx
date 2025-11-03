@@ -20,13 +20,13 @@ import { ThemedView } from '@/components/themed-view';
 import { ActionSheet } from '@/components/action-sheet';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import type { MealData } from '@/services/database/meals';
+import type { DietEntry } from '@/services/database/diet';
 
 interface MealEntryModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (mealData: MealData) => void;
-  editMeal?: MealData | null;
+  onSave: (entryData: DietEntry) => void;
+  editMeal?: DietEntry | null;
 }
 
 export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntryModalProps) {
@@ -155,7 +155,7 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
       return;
     }
 
-    const mealData: MealData = {
+    const entryData: DietEntry = {
       id: isEditMode ? editMeal!.id : Date.now().toString(),
       imageUri: selectedImage,
       description,
@@ -166,7 +166,7 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
       timestamp: isEditMode ? editMeal!.timestamp : Date.now(),
     };
 
-    onSave(mealData);
+    onSave(entryData);
     resetForm();
   };
 

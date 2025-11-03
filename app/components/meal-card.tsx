@@ -5,11 +5,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import type { MealData } from '@/services/database/meals';
+import type { DietEntry } from '@/services/database/diet';
 
 interface MealCardProps {
-  meal: MealData;
-  onEdit?: (meal: MealData) => void;
+  meal: DietEntry;
+  onEdit?: (meal: DietEntry) => void;
   onDelete?: (mealId: string) => void;
 }
 
