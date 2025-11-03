@@ -1,4 +1,4 @@
-import { getDatabase } from './index';
+import { getDatabase } from './connection';
 
 export interface MealData {
   id: string;
