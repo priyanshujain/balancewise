@@ -1,5 +1,5 @@
 import { DailyGoal, TaskCompletion } from '@/types/goals';
-import { getDatabase, initDatabase } from './index';
+import { getDatabase, initDatabase } from './connection';
 
 // Goals operations
 export async function getAllGoals(): Promise<DailyGoal[]> {

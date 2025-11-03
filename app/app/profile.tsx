@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Image, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, Image, Alert, Platform, ScrollView, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/auth-context';

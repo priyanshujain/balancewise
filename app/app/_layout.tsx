@@ -8,7 +8,8 @@ import '../global.css';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { GoalsProvider } from '@/contexts/goals-context';
-import { initDatabase } from '@/services/database';
+import { WorkoutSessionProvider } from '@/contexts/WorkoutSessionContext';
+import { seedDatabaseIfNeeded } from '@/services/database';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -21,15 +22,17 @@ function RootLayoutNav() {
   const router = useRouter();
 
   useEffect(() => {
+    seedDatabaseIfNeeded().catch(console.error);
+  }, []);
+
+  useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === 'sign-in';
 
     if (!user && !inAuthGroup) {
-      // Redirect to sign-in if not authenticated
       router.replace('/sign-in');
     } else if (user && inAuthGroup) {
-      // Redirect to tabs if authenticated and on sign-in screen
       router.replace('/(tabs)');
     }
   }, [user, segments, isLoading, router]);
@@ -49,6 +52,22 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen
+          name="exercise/workout-builder"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="exercise/workout-player"
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="exercise/exercise-detail"
+          options={{ presentation: 'modal', title: 'Exercise Details' }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
@@ -56,21 +75,13 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  // Initialize database on app startup
-  useEffect(() => {
-    initDatabase()
-      .then(() => {
-        console.log('Database initialized successfully');
-      })
-      .catch((error) => {
-        console.error('Failed to initialize database:', error);
-      });
-  }, []);
 
   return (
     <AuthProvider>
       <GoalsProvider>
-        <RootLayoutNav />
+        <WorkoutSessionProvider>
+          <RootLayoutNav />
+        </WorkoutSessionProvider>
       </GoalsProvider>
     </AuthProvider>
   );

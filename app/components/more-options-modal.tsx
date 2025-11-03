@@ -34,15 +34,18 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
   const handleOptionPress = (optionId: string) => {
     onClose();
 
-    switch (optionId) {
-      case 'profile':
-        router.push('/profile');
-        break;
-      case 'help':
-        break;
-      default:
-        break;
-    }
+    // Small delay to allow modal to close before navigating
+    setTimeout(() => {
+      switch (optionId) {
+        case 'profile':
+          router.push('/profile');
+          break;
+        case 'help':
+          break;
+        default:
+          break;
+      }
+    }, 250);
   };
 
   useEffect(() => {
@@ -147,13 +150,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    boxShadow: '0px -4px 3px 0px rgba(0, 0, 0, 0.15)',
     elevation: 5,
   },
   contentContainer: {
