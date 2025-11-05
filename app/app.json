@@ -9,11 +9,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+          "NSCameraUsageDescription": "BalanceWise needs access to your camera to capture",
+          "NSPhotoLibraryUsageDescription": "BalanceWise needs access to your photo library"
+      },
+      "bundleIdentifier": "com.priyanshujain.balancewise"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFC107",
+        "backgroundColor": "#FFCE00",
         "foregroundImage": "./assets/images/app-icon.png"
       },
       "edgeToEdgeEnabled": true,
@@ -32,10 +37,17 @@
           "image": "./assets/images/app-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FFC107",
+          "backgroundColor": "#FFCE00",
           "dark": {
-            "backgroundColor": "#FFC107"
+            "backgroundColor": "#FFCE00"
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+            "photosPermission": "BalanceWise needs access to your photo library.",
+            "cameraPermission": "BalanceWise needs access to your camera"
         }
       ]
     ],
