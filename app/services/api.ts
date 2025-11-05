@@ -75,6 +75,15 @@ class ApiService {
       },
     });
   }
+
+  async requestDrivePermission(token: string): Promise<InitiateAuthResponse> {
+    return this.request<InitiateAuthResponse>('/auth/request-drive-permission', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
 }
 
 export const apiService = new ApiService(API_URL);

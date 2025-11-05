@@ -5,21 +5,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { DietEntryModal } from '@/components/diet-entry-modal';
+import { DrivePermissionModal } from '@/components/drive-permission-modal';
 import { DietCard } from '@/components/diet-card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDiet } from '@/hooks/use-diet';
+import { useAuth } from '@/contexts/auth-context';
 import type { DietEntry } from '@/services/database/diet';
 
 export default function DietScreen() {
   const [showModal, setShowModal] = useState(false);
+  const [showDriveModal, setShowDriveModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DietEntry | null>(null);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  // Use the custom hook for database operations
   const { dietEntries, loading, addDietEntry, updateDietEntry, removeDietEntry } = useDiet();
+  const { hasDrivePermission } = useAuth();
 
   const handleSaveEntry = async (entryData: DietEntry) => {
     try {
@@ -58,6 +61,15 @@ export default function DietScreen() {
   };
 
   const handleAddNew = () => {
+    if (!hasDrivePermission) {
+      setShowDriveModal(true);
+      return;
+    }
+    setEditingEntry(null);
+    setShowModal(true);
+  };
+
+  const handleDrivePermissionSuccess = () => {
     setEditingEntry(null);
     setShowModal(true);
   };
@@ -108,6 +120,12 @@ export default function DietScreen() {
         onClose={handleCloseModal}
         onSave={handleSaveEntry}
         editEntry={editingEntry}
+      />
+
+      <DrivePermissionModal
+        visible={showDriveModal}
+        onClose={() => setShowDriveModal(false)}
+        onSuccess={handleDrivePermissionSuccess}
       />
     </ThemedView>
   );

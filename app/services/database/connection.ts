@@ -47,6 +47,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
           email TEXT NOT NULL,
           name TEXT NOT NULL,
           picture TEXT,
+          has_drive_permission INTEGER DEFAULT 0,
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL
         );
