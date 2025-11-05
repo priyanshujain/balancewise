@@ -1,19 +1,22 @@
+import { useState } from 'react';
 import { StyleSheet, View, Image, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ImageViewerModal } from '@/components/image-viewer-modal';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
 
-interface MealCardProps {
+interface DietCardProps {
   meal: DietEntry;
   onEdit?: (meal: DietEntry) => void;
   onDelete?: (mealId: string) => void;
 }
 
-export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
+export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -60,7 +63,10 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
         },
       ]}>
       <View style={styles.content}>
-        <Pressable onPress={() => onEdit?.(meal)} style={styles.imageContainer}>
+        <Pressable
+          onPress={() => setShowImageViewer(true)}
+          onLongPress={() => onEdit?.(meal)}
+          style={styles.imageContainer}>
           <Image
             source={{ uri: meal.imageUri }}
             style={styles.image}
@@ -68,7 +74,7 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
           />
         </Pressable>
 
-        <View style={styles.infoContainer}>
+        <Pressable style={styles.infoContainer} onPress={() => onEdit?.(meal)}>
           <ThemedText style={[styles.timeText, { color: colors.tabIconDefault }]}>
             {getTimeAgo(meal.timestamp)}
           </ThemedText>
@@ -136,7 +142,7 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
               </View>
             </View>
           </View>
-        </View>
+        </Pressable>
       </View>
 
       <Pressable
@@ -144,6 +150,12 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
         onPress={handleDelete}>
         <Ionicons name="trash-outline" size={20} color="#FF3B30" />
       </Pressable>
+
+      <ImageViewerModal
+        visible={showImageViewer}
+        imageUri={meal.imageUri}
+        onClose={() => setShowImageViewer(false)}
+      />
     </ThemedView>
   );
 }
@@ -211,6 +223,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderRadius: 16,
     overflow: 'hidden',
+    justifyContent: 'center'
   },
   deleteButton: {
     position: 'absolute',

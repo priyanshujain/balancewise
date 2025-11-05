@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
-import { MealEntryModal } from '@/components/meal-entry-modal';
-import { MealCard } from '@/components/meal-card';
+import { DietEntryModal } from '@/components/diet-entry-modal';
+import { DietCard } from '@/components/diet-card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDiet } from '@/hooks/use-diet';
@@ -76,7 +76,7 @@ export default function DietScreen() {
           data={dietEntries}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <MealCard
+            <DietCard
               meal={item}
               onEdit={handleEditEntry}
               onDelete={handleDeleteEntry}
@@ -103,11 +103,11 @@ export default function DietScreen() {
         <Ionicons name="add" size={32} color="#fff" />
       </Pressable>
 
-      <MealEntryModal
+      <DietEntryModal
         visible={showModal}
         onClose={handleCloseModal}
         onSave={handleSaveEntry}
-        editMeal={editingEntry}
+        editEntry={editingEntry}
       />
     </ThemedView>
   );

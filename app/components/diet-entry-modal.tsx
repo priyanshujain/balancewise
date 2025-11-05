@@ -22,14 +22,14 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
 
-interface MealEntryModalProps {
+interface DietEntryModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (entryData: DietEntry) => void;
-  editMeal?: DietEntry | null;
+  editEntry?: DietEntry | null;
 }
 
-export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntryModalProps) {
+export function DietEntryModal({ visible, onClose, onSave, editEntry }: DietEntryModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [calories, setCalories] = useState('');
@@ -42,21 +42,21 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const isEditMode = !!editMeal;
+  const isEditMode = !!editEntry;
 
   console.log('MealEntryModal render - selectedImage:', selectedImage);
 
   // Populate form when editing
   useEffect(() => {
-    if (editMeal) {
-      setSelectedImage(editMeal.imageUri);
-      setDescription(editMeal.description);
-      setCalories(editMeal.calories);
-      setProtein(editMeal.protein);
-      setCarbs(editMeal.carbs);
-      setFat(editMeal.fat);
+    if (editEntry) {
+      setSelectedImage(editEntry.imageUri);
+      setDescription(editEntry.description);
+      setCalories(editEntry.calories);
+      setProtein(editEntry.protein);
+      setCarbs(editEntry.carbs);
+      setFat(editEntry.fat);
     }
-  }, [editMeal]);
+  }, [editEntry]);
 
   const compressImage = async (uri: string): Promise<string> => {
     console.log('Compressing image...');
@@ -156,14 +156,14 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
     }
 
     const entryData: DietEntry = {
-      id: isEditMode ? editMeal!.id : Date.now().toString(),
+      id: isEditMode ? editEntry!.id : Date.now().toString(),
       imageUri: selectedImage,
       description,
       calories,
       protein,
       carbs,
       fat,
-      timestamp: isEditMode ? editMeal!.timestamp : Date.now(),
+      timestamp: isEditMode ? editEntry!.timestamp : Date.now(),
     };
 
     onSave(entryData);
@@ -223,23 +223,10 @@ export function MealEntryModal({ visible, onClose, onSave, editMeal }: MealEntry
                     contentContainerStyle={styles.scrollContent}>
                     {selectedImage ? (
                       <View style={styles.imageContainer}>
-                        <ThemedText style={{ fontSize: 10, padding: 8 }}>
-                          Image URI: {selectedImage}
-                        </ThemedText>
                         <Image
                           source={{ uri: selectedImage }}
-                          style={{
-                            width: '100%',
-                            height: 200,
-                            backgroundColor: 'red',
-                          }}
-                          resizeMode="cover"
-                          onLoadStart={() => console.log('Image load started')}
-                          onLoad={() => console.log('Image loaded successfully')}
-                          onError={(error) => {
-                            console.log('Image load error:', error);
-                            console.log('Error details:', JSON.stringify(error));
-                          }}
+                          style={styles.selectedImage}
+                          resizeMode="contain"
                         />
                         <Pressable
                           style={[styles.changeImageOverlay, { position: 'relative', marginTop: 10 }]}
