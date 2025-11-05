@@ -72,6 +72,13 @@ func (r *tokenRepository) DeleteByJWT(ctx context.Context, jwtToken string) erro
 	return r.queries.DeleteAuthTokenByJWT(ctx, jwtToken)
 }
 
+func (r *tokenRepository) UpdateRefreshToken(ctx context.Context, id uuid.UUID, refreshToken string) error {
+	return r.queries.UpdateAuthTokenRefreshToken(ctx, UpdateAuthTokenRefreshTokenParams{
+		ID:           id,
+		RefreshToken: sql.NullString{String: refreshToken, Valid: true},
+	})
+}
+
 func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
 	return r.queries.DeleteExpiredAuthTokens(ctx)
 }

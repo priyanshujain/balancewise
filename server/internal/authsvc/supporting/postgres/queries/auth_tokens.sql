@@ -21,6 +21,11 @@ ORDER BY created_at DESC;
 DELETE FROM auth_tokens
 WHERE expires_at < NOW();
 
+-- name: UpdateAuthTokenRefreshToken :exec
+UPDATE auth_tokens
+SET refresh_token = $2
+WHERE id = $1;
+
 -- name: DeleteAuthToken :exec
 DELETE FROM auth_tokens
 WHERE id = $1;

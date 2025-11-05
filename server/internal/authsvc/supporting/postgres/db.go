@@ -66,6 +66,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateAuthStateStmt, err = db.PrepareContext(ctx, updateAuthState); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAuthState: %w", err)
 	}
+	if q.updateAuthTokenRefreshTokenStmt, err = db.PrepareContext(ctx, updateAuthTokenRefreshToken); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAuthTokenRefreshToken: %w", err)
+	}
 	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
 	}
@@ -147,6 +150,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateAuthStateStmt: %w", cerr)
 		}
 	}
+	if q.updateAuthTokenRefreshTokenStmt != nil {
+		if cerr := q.updateAuthTokenRefreshTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAuthTokenRefreshTokenStmt: %w", cerr)
+		}
+	}
 	if q.updateUserStmt != nil {
 		if cerr := q.updateUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
@@ -194,45 +202,47 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                          DBTX
-	tx                          *sql.Tx
-	createAuthStateStmt         *sql.Stmt
-	createAuthTokenStmt         *sql.Stmt
-	createUserStmt              *sql.Stmt
-	deleteAuthStateStmt         *sql.Stmt
-	deleteAuthTokenStmt         *sql.Stmt
-	deleteAuthTokenByJWTStmt    *sql.Stmt
-	deleteExpiredAuthStatesStmt *sql.Stmt
-	deleteExpiredAuthTokensStmt *sql.Stmt
-	getAuthStateStmt            *sql.Stmt
-	getAuthTokenByJWTStmt       *sql.Stmt
-	getAuthTokensByUserIDStmt   *sql.Stmt
-	getUserByEmailStmt          *sql.Stmt
-	getUserByIDStmt             *sql.Stmt
-	updateAuthStateStmt         *sql.Stmt
-	updateUserStmt              *sql.Stmt
-	updateUserByEmailStmt       *sql.Stmt
+	db                              DBTX
+	tx                              *sql.Tx
+	createAuthStateStmt             *sql.Stmt
+	createAuthTokenStmt             *sql.Stmt
+	createUserStmt                  *sql.Stmt
+	deleteAuthStateStmt             *sql.Stmt
+	deleteAuthTokenStmt             *sql.Stmt
+	deleteAuthTokenByJWTStmt        *sql.Stmt
+	deleteExpiredAuthStatesStmt     *sql.Stmt
+	deleteExpiredAuthTokensStmt     *sql.Stmt
+	getAuthStateStmt                *sql.Stmt
+	getAuthTokenByJWTStmt           *sql.Stmt
+	getAuthTokensByUserIDStmt       *sql.Stmt
+	getUserByEmailStmt              *sql.Stmt
+	getUserByIDStmt                 *sql.Stmt
+	updateAuthStateStmt             *sql.Stmt
+	updateAuthTokenRefreshTokenStmt *sql.Stmt
+	updateUserStmt                  *sql.Stmt
+	updateUserByEmailStmt           *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                          tx,
-		tx:                          tx,
-		createAuthStateStmt:         q.createAuthStateStmt,
-		createAuthTokenStmt:         q.createAuthTokenStmt,
-		createUserStmt:              q.createUserStmt,
-		deleteAuthStateStmt:         q.deleteAuthStateStmt,
-		deleteAuthTokenStmt:         q.deleteAuthTokenStmt,
-		deleteAuthTokenByJWTStmt:    q.deleteAuthTokenByJWTStmt,
-		deleteExpiredAuthStatesStmt: q.deleteExpiredAuthStatesStmt,
-		deleteExpiredAuthTokensStmt: q.deleteExpiredAuthTokensStmt,
-		getAuthStateStmt:            q.getAuthStateStmt,
-		getAuthTokenByJWTStmt:       q.getAuthTokenByJWTStmt,
-		getAuthTokensByUserIDStmt:   q.getAuthTokensByUserIDStmt,
-		getUserByEmailStmt:          q.getUserByEmailStmt,
-		getUserByIDStmt:             q.getUserByIDStmt,
-		updateAuthStateStmt:         q.updateAuthStateStmt,
-		updateUserStmt:              q.updateUserStmt,
-		updateUserByEmailStmt:       q.updateUserByEmailStmt,
+		db:                              tx,
+		tx:                              tx,
+		createAuthStateStmt:             q.createAuthStateStmt,
+		createAuthTokenStmt:             q.createAuthTokenStmt,
+		createUserStmt:                  q.createUserStmt,
+		deleteAuthStateStmt:             q.deleteAuthStateStmt,
+		deleteAuthTokenStmt:             q.deleteAuthTokenStmt,
+		deleteAuthTokenByJWTStmt:        q.deleteAuthTokenByJWTStmt,
+		deleteExpiredAuthStatesStmt:     q.deleteExpiredAuthStatesStmt,
+		deleteExpiredAuthTokensStmt:     q.deleteExpiredAuthTokensStmt,
+		getAuthStateStmt:                q.getAuthStateStmt,
+		getAuthTokenByJWTStmt:           q.getAuthTokenByJWTStmt,
+		getAuthTokensByUserIDStmt:       q.getAuthTokensByUserIDStmt,
+		getUserByEmailStmt:              q.getUserByEmailStmt,
+		getUserByIDStmt:                 q.getUserByIDStmt,
+		updateAuthStateStmt:             q.updateAuthStateStmt,
+		updateAuthTokenRefreshTokenStmt: q.updateAuthTokenRefreshTokenStmt,
+		updateUserStmt:                  q.updateUserStmt,
+		updateUserByEmailStmt:           q.updateUserByEmailStmt,
 	}
 }

@@ -134,3 +134,19 @@ func (q *Queries) GetAuthTokensByUserID(ctx context.Context, userID uuid.UUID) (
 	}
 	return items, nil
 }
+
+const updateAuthTokenRefreshToken = `-- name: UpdateAuthTokenRefreshToken :exec
+UPDATE auth_tokens
+SET refresh_token = $2
+WHERE id = $1
+`
+
+type UpdateAuthTokenRefreshTokenParams struct {
+	ID           uuid.UUID      `json:"id"`
+	RefreshToken sql.NullString `json:"refresh_token"`
+}
+
+func (q *Queries) UpdateAuthTokenRefreshToken(ctx context.Context, arg UpdateAuthTokenRefreshTokenParams) error {
+	_, err := q.exec(ctx, q.updateAuthTokenRefreshTokenStmt, updateAuthTokenRefreshToken, arg.ID, arg.RefreshToken)
+	return err
+}

@@ -242,6 +242,107 @@ func (s *Service) CleanupExpired(ctx context.Context) error {
 	return nil
 }
 
+// InitiateDriveAuth generates an auth URL for requesting Google Drive permissions
+func (s *Service) InitiateDriveAuth(ctx context.Context, userID uuid.UUID) (authURL string, state string, err error) {
+	// Get user to retrieve email
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return "", "", domain.WrapError("failed to get user", err)
+	}
+
+	// Generate random state
+	state, err = google.GenerateRandomState(32)
+	if err != nil {
+		return "", "", domain.WrapError("failed to generate state", err)
+	}
+
+	// Generate Drive auth URL with user's email
+	authURL = s.oauth.GenerateDriveAuthURL(state, user.Email)
+
+	// Store state in database with user ID
+	_, err = s.stateRepo.Create(ctx, state, authURL, time.Now().Add(10*time.Minute))
+	if err != nil {
+		return "", "", domain.WrapError("failed to create auth state", err)
+	}
+
+	// Update the state to include the user ID
+	_, err = s.stateRepo.Update(ctx, state, userID, false)
+	if err != nil {
+		return "", "", domain.WrapError("failed to update state with user ID", err)
+	}
+
+	slog.Info("initiated Drive auth", "state", state, "user_id", userID)
+	return authURL, state, nil
+}
+
+// HandleDriveCallback processes the Drive permission callback
+func (s *Service) HandleDriveCallback(ctx context.Context, state, code string) (*domain.User, error) {
+	// Verify state exists and is valid
+	authState, err := s.stateRepo.Get(ctx, state)
+	if err != nil {
+		return nil, domain.WrapError("invalid or expired state", err)
+	}
+
+	if time.Now().After(authState.ExpiresAt) {
+		return nil, domain.ErrInvalidState
+	}
+
+	if authState.UserID == nil {
+		return nil, fmt.Errorf("state does not have associated user")
+	}
+
+	// Exchange code for token with Drive scope
+	token, err := s.oauth.ExchangeDriveCode(ctx, code)
+	if err != nil {
+		return nil, domain.WrapError("failed to exchange drive code", err)
+	}
+
+	// Get user
+	user, err := s.userRepo.GetByID(ctx, *authState.UserID)
+	if err != nil {
+		return nil, domain.WrapError("failed to get user", err)
+	}
+
+	// Update the user's refresh token with the new one that has Drive scope
+	// First, get existing tokens for this user
+	tokens, err := s.tokenRepo.GetByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, domain.WrapError("failed to get existing tokens", err)
+	}
+
+	// Update the most recent token with the new refresh token
+	if len(tokens) > 0 {
+		// Update the refresh token on the existing token
+		err = s.tokenRepo.UpdateRefreshToken(ctx, tokens[0].ID, token.RefreshToken)
+		if err != nil {
+			return nil, domain.WrapError("failed to update refresh token", err)
+		}
+	} else {
+		// If no token exists, create a new one (shouldn't happen in normal flow)
+		jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
+		if err != nil {
+			return nil, domain.WrapError("failed to generate JWT", err)
+		}
+
+		authToken := domain.AuthToken{
+			UserID:       user.ID,
+			JWTToken:     jwtToken,
+			RefreshToken: &token.RefreshToken,
+			ExpiresAt:    time.Now().Add(30 * 24 * time.Hour),
+		}
+		_, err = s.tokenRepo.Create(ctx, authToken)
+		if err != nil {
+			return nil, domain.WrapError("failed to store token", err)
+		}
+	}
+
+	// Delete the state after successful processing
+	_ = s.stateRepo.Delete(ctx, state)
+
+	slog.Info("successfully granted Drive permissions", "email", user.Email, "user_id", user.ID)
+	return user, nil
+}
+
 // downloadAndEncodeImage downloads an image from a URL and returns it as base64
 func (s *Service) downloadAndEncodeImage(url string) (string, error) {
 	if url == "" {
