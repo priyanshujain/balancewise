@@ -252,7 +252,6 @@ func (h *httpHandler) handleRequestDrivePermission(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Get user ID from JWT token
 	authHeader := r.Header.Get("Authorization")
 	tokenString, err := jwt.ExtractToken(authHeader)
 	if err != nil {
@@ -268,7 +267,6 @@ func (h *httpHandler) handleRequestDrivePermission(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Generate Drive permission URL
 	authURL, state, err := h.svc.InitiateDriveAuth(ctx, user.ID)
 	if err != nil {
 		httpErr := httperrors.From(err)
@@ -316,7 +314,6 @@ func (h *httpHandler) handleDriveCallback(w http.ResponseWriter, r *http.Request
 
 	slog.Info("successfully granted Drive permissions", "email", user.Email, "user_id", user.ID)
 
-	// Return success HTML page
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, `
 		<!DOCTYPE html>

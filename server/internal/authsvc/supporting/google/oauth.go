@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	// ScopeDriveFile allows access to create and modify files in Google Drive
 	ScopeDriveFile = "https://www.googleapis.com/auth/drive.file"
 )
 
@@ -54,27 +53,23 @@ func (s *OAuthService) GenerateAuthURL(state string) string {
 	return s.config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
-// GenerateDriveAuthURL generates a Google OAuth URL for requesting additional Drive permissions
-// This uses incremental authorization to add Drive scope to an existing token
 func (s *OAuthService) GenerateDriveAuthURL(state string, userEmail string) string {
-	// Create a temporary config with Drive scope added
 	driveConfig := &oauth2.Config{
 		ClientID:     s.config.ClientID,
 		ClientSecret: s.config.ClientSecret,
-		RedirectURL:  s.config.RedirectURL + "-drive", // Use a different callback URL
+		RedirectURL:  s.config.RedirectURL + "-drive",
 		Scopes: []string{
 			ScopeDriveFile,
 		},
 		Endpoint: google.Endpoint,
 	}
 
-	// Use SetAuthURLParam to add parameters for incremental authorization
 	return driveConfig.AuthCodeURL(
 		state,
 		oauth2.AccessTypeOffline,
-		oauth2.ApprovalForce, // Force consent screen to show
-		oauth2.SetAuthURLParam("login_hint", userEmail), // Pre-fill email
-		oauth2.SetAuthURLParam("include_granted_scopes", "true"), // Incremental auth
+		oauth2.ApprovalForce,
+		oauth2.SetAuthURLParam("login_hint", userEmail),
+		oauth2.SetAuthURLParam("include_granted_scopes", "true"),
 	)
 }
 
@@ -87,9 +82,7 @@ func (s *OAuthService) ExchangeCode(ctx context.Context, code string) (*oauth2.T
 	return token, nil
 }
 
-// ExchangeDriveCode exchanges an authorization code for a token with Drive scope
 func (s *OAuthService) ExchangeDriveCode(ctx context.Context, code string) (*oauth2.Token, error) {
-	// Create a temporary config with Drive scope for the exchange
 	driveConfig := &oauth2.Config{
 		ClientID:     s.config.ClientID,
 		ClientSecret: s.config.ClientSecret,
