@@ -146,9 +146,9 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
       </View>
 
       <Pressable
-        style={[styles.deleteButton, { backgroundColor: colors.background }]}
-        onPress={handleDelete}>
-        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+        style={[styles.editButton, { backgroundColor: colors.background }]}
+        onPress={() => onEdit?.(meal)}>
+        <Ionicons name="pencil-outline" size={20} color={colors.tint} />
       </Pressable>
 
       <ImageViewerModal
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center'
   },
-  deleteButton: {
+  editButton: {
     position: 'absolute',
     top: 12,
     right: 12,
