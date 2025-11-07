@@ -107,6 +107,7 @@ export default function DietScreen() {
         visible={showModal}
         onClose={handleCloseModal}
         onSave={handleSaveEntry}
+        onDelete={handleDeleteEntry}
         editEntry={editingEntry}
       />
     </ThemedView>

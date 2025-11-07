@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -26,10 +27,11 @@ interface DietEntryModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (entryData: DietEntry) => void;
+  onDelete?: (mealId: string) => void;
   editEntry?: DietEntry | null;
 }
 
-export function DietEntryModal({ visible, onClose, onSave, editEntry }: DietEntryModalProps) {
+export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }: DietEntryModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [calories, setCalories] = useState('');
@@ -190,6 +192,27 @@ export function DietEntryModal({ visible, onClose, onSave, editEntry }: DietEntr
     onClose();
   };
 
+  const handleDelete = () => {
+    if (!editEntry) return;
+
+    Alert.alert(
+      'Delete Meal',
+      'Are you sure you want to delete this meal?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            onDelete?.(editEntry.id);
+            resetForm();
+            onClose();
+          }
+        },
+      ]
+    );
+  };
+
   return (
     <>
       <Modal
@@ -206,6 +229,15 @@ export function DietEntryModal({ visible, onClose, onSave, editEntry }: DietEntr
                 <ThemedView
                   style={[styles.container, { backgroundColor: colors.background }]}>
                   <View style={styles.header}>
+                    {isEditMode && (
+                      <Pressable onPress={handleDelete} style={styles.deleteButton}>
+                        <Ionicons
+                          name="trash-outline"
+                          size={24}
+                          color="#FF3B30"
+                        />
+                      </Pressable>
+                    )}
                     <ThemedText type="subtitle" style={styles.title}>
                       {isEditMode ? 'Edit Meal' : 'Add Meal'}
                     </ThemedText>
@@ -420,6 +452,11 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 16,
+    padding: 4,
+  },
+  deleteButton: {
+    position: 'absolute',
+    left: 16,
     padding: 4,
   },
   scrollContent: {
