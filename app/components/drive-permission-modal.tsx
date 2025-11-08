@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { Modal, View, Pressable, ActivityIndicator, Alert, Image, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 
-import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -87,172 +86,96 @@ export function DrivePermissionModal({ visible, onClose, onSuccess }: DrivePermi
   return (
     <Modal
       visible={visible}
-      transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
-            <Ionicons name="logo-google-drive" size={48} color={colors.tint} />
-            <ThemedText style={styles.title}>Google Drive Access</ThemedText>
-          </View>
+      <ThemedView className="flex-1">
+        {/* Close button */}
+        <Pressable
+          className="absolute top-14 right-5 z-10 p-2"
+          onPress={onClose}
+          disabled={isLoading}
+        >
+          <Ionicons name="close" size={28} color={colors.text} />
+        </Pressable>
 
-          <ThemedText style={[styles.description, { color: colors.text }]}>
+        {/* Content */}
+        <View className="flex-1 items-center justify-center px-10">
+          {/* Google Drive Logo */}
+          <Image
+            source={require('@/assets/images/gdrive.png')}
+            className="w-24 h-24 mb-8"
+            resizeMode="contain"
+          />
+
+          {/* Title */}
+          <Text className="text-2xl font-bold text-center mb-5" style={{ color: colors.text }}>
+            Google Drive Access Required
+          </Text>
+
+          {/* Description */}
+          <Text className="text-base text-center leading-6 mb-10 opacity-90" style={{ color: colors.text }}>
             To save your food images securely, we need permission to access your Google Drive.
-          </ThemedText>
+          </Text>
 
-          <View style={[styles.benefitsContainer, { backgroundColor: colors.card }]}>
-            <View style={styles.benefitRow}>
+          {/* Benefits */}
+          <View
+            className="w-full rounded-2xl p-6 gap-5"
+            style={{ backgroundColor: colors.card }}
+          >
+            <View className="flex-row items-start gap-4">
               <Ionicons name="cloud-upload-outline" size={24} color={colors.tint} />
-              <ThemedText style={styles.benefitText}>
+              <Text className="flex-1 text-[15px] leading-6" style={{ color: colors.text }}>
                 Your photos will be stored in your personal Google Drive
-              </ThemedText>
+              </Text>
             </View>
 
-            <View style={styles.benefitRow}>
+            <View className="flex-row items-start gap-4">
               <Ionicons name="folder-outline" size={24} color={colors.tint} />
-              <ThemedText style={styles.benefitText}>
+              <Text className="flex-1 text-[15px] leading-6" style={{ color: colors.text }}>
                 Organized in a "BalanceWise" folder you can access anytime
-              </ThemedText>
+              </Text>
             </View>
 
-            <View style={styles.benefitRow}>
+            <View className="flex-row items-start gap-4">
               <Ionicons name="lock-closed-outline" size={24} color={colors.tint} />
-              <ThemedText style={styles.benefitText}>
+              <Text className="flex-1 text-[15px] leading-6" style={{ color: colors.text }}>
                 Only you have access - we never see your photos
-              </ThemedText>
+              </Text>
             </View>
           </View>
 
           {statusMessage && (
-            <ThemedText style={[styles.statusMessage, { color: colors.tabIconDefault }]}>
+            <Text
+              className="text-sm text-center mt-5 italic"
+              style={{ color: colors.icon }}
+            >
               {statusMessage}
-            </ThemedText>
+            </Text>
           )}
+        </View>
 
-          <View style={styles.buttonContainer}>
-            <Pressable
-              style={[
-                styles.button,
-                styles.cancelButton,
-                { backgroundColor: colors.card, borderColor: colors.border }
-              ]}
-              onPress={onClose}
-              disabled={isLoading}
-            >
-              <ThemedText style={[styles.buttonText, { color: colors.text }]}>
-                Not Now
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.button,
-                styles.grantButton,
-                { backgroundColor: colors.tint },
-                isLoading && styles.buttonDisabled
-              ]}
-              onPress={handleGrantPermission}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <ThemedText style={[styles.buttonText, { color: '#fff' }]}>
-                  Grant Access
-                </ThemedText>
-              )}
-            </Pressable>
-          </View>
-        </ThemedView>
-      </View>
+        {/* Grant Access Button */}
+        <View className="px-10 pb-12">
+          <Pressable
+            className="py-5 rounded-xl items-center justify-center"
+            style={[
+              { backgroundColor: colors.tint },
+              isLoading && { opacity: 0.6 }
+            ]}
+            onPress={handleGrantPermission}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-lg font-semibold text-white">
+                Grant Access
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      </ThemedView>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  benefitsContainer: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  benefitText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    marginLeft: 12,
-  },
-  statusMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  grantButton: {
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
