@@ -19,6 +19,9 @@ import (
 	"github.com/priyanshujain/balancewise/server/internal/authsvc/supporting/google"
 	"github.com/priyanshujain/balancewise/server/internal/authsvc/supporting/postgres"
 	"github.com/priyanshujain/balancewise/server/internal/config"
+	"github.com/priyanshujain/balancewise/server/internal/dietapi"
+	"github.com/priyanshujain/balancewise/server/internal/dietsvc"
+	"github.com/priyanshujain/balancewise/server/internal/dietsvc/supporting/openai"
 	"github.com/priyanshujain/balancewise/server/internal/generic/httplog"
 	"github.com/priyanshujain/balancewise/server/internal/jwt"
 )
@@ -81,20 +84,32 @@ func main() {
 		JWTService:      jwtService,
 	})
 
-	// Initialize HTTP handler
-	httpHandler := authapi.NewHandler(authService)
+	// Initialize OpenAI vision client
+	visionClient := openai.NewVisionClient(cfg.OpenAIAPIKey)
+
+	// Initialize diet service
+	dietService := dietsvc.NewService(visionClient)
+
+	// Initialize HTTP handlers
+	authHandler := authapi.NewHandler(authService)
+	dietHandler := dietapi.NewHandler(dietService)
+
+	// Create main mux and mount handlers
+	mux := http.NewServeMux()
+	mux.Handle("/", authHandler)
+	mux.Handle("/diet/", dietHandler)
 
 	// Wrap with middleware
-	handler := httplog.Middleware(cfg.HTTPLog)(httpHandler)
+	handler := httplog.Middleware(cfg.HTTPLog)(mux)
 
 	// Add panic recovery
 	handler = recoveryMiddleware(handler)
 
 	// Create HTTP server
 	httpServer := &http.Server{
-		Addr:        ":" + cfg.Port,
-		Handler:     handler,
-		BaseContext: func(net.Listener) context.Context { return ctx },
+		Addr:         ":" + cfg.Port,
+		Handler:      handler,
+		BaseContext:  func(net.Listener) context.Context { return ctx },
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
