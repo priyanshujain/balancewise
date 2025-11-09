@@ -48,7 +48,7 @@ Provide your best estimates based on typical portion sizes. Do not include any e
 	params := openai.ChatCompletionNewParams{
 		Messages:            messages,
 		Model:               openai.ChatModelGPT5Mini,
-		MaxCompletionTokens: openai.Int(50000),
+		MaxCompletionTokens: openai.Int(5000),
 	}
 
 	response, err := v.client.Chat.Completions.New(ctx, params)

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -41,7 +42,10 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 				requestBody, _ = io.ReadAll(r.Body)
 				r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 
-				if len(requestBody) > 1024 || r.Header.Get("Content-Type")[:19] == "multipart/form-data" {
+				contentType := r.Header.Get("Content-Type")
+				isMultipart := strings.HasPrefix(contentType, "multipart/form-data")
+
+				if len(requestBody) > 1024 || isMultipart {
 					requestBodyLog = fmt.Sprintf("[%d bytes]", len(requestBody))
 				} else {
 					requestBodyLog = string(requestBody)
