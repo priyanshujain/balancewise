@@ -36,9 +36,16 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 
 			// Capture request body
 			var requestBody []byte
+			var requestBodyLog string
 			if r.Body != nil {
 				requestBody, _ = io.ReadAll(r.Body)
 				r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+				if len(requestBody) > 1024 || r.Header.Get("Content-Type")[:19] == "multipart/form-data" {
+					requestBodyLog = fmt.Sprintf("[%d bytes]", len(requestBody))
+				} else {
+					requestBodyLog = string(requestBody)
+				}
 			}
 
 			// Wrap response writer to capture status and body
@@ -52,7 +59,7 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 			slog.Info(fmt.Sprintf("%s %s started", r.Method, r.URL.Path),
 				"remote_addr", r.RemoteAddr,
 				"auth_header_present", r.Header.Get("Authorization") != "",
-				"request_body", string(requestBody),
+				"request_body", requestBodyLog,
 			)
 
 			h.ServeHTTP(rw, r)
