@@ -33,23 +33,22 @@ func NewHandler(svc *dietsvc.Service) http.Handler {
 }
 
 func (h *httpHandler) init() {
-	h.HandleFunc("/diet/analyze", corsMiddleware(h.handleAnalyze))
+	h.HandleFunc("POST /diet/analyze", corsMiddleware(h.handleAnalyze))
 }
 
 func (h *httpHandler) handleAnalyze(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		httpErr := httperrors.New(400, "FORM_PARSE_ERROR", "failed to parse multipart form")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpErr.HttpStatus)
+		json.NewEncoder(w).Encode(httpErr)
 		return
 	}
 
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		httpErr := httperrors.From(domain.ErrNoImageProvided)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(httpErr.HttpStatus)
 		json.NewEncoder(w).Encode(httpErr)
 		return
@@ -58,7 +57,10 @@ func (h *httpHandler) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	imageData, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read image", http.StatusBadRequest)
+		httpErr := httperrors.New(400, "IMAGE_READ_ERROR", "failed to read image data")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpErr.HttpStatus)
+		json.NewEncoder(w).Encode(httpErr)
 		return
 	}
 
