@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -11,8 +11,6 @@ import {
   Platform,
   Image,
   Alert,
-  ActivityIndicator,
-  Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -24,7 +22,6 @@ import { ActionSheet } from '@/components/action-sheet';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
-import { apiService } from '@/services/api';
 
 interface DietEntryModalProps {
   visible: boolean;
@@ -43,97 +40,11 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   const [fat, setFat] = useState('');
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [isPickingImage, setIsPickingImage] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [descriptionSelection, setDescriptionSelection] = useState<{start: number, end: number} | undefined>(undefined);
-
-  const descriptionInputRef = useRef<any>(null);
-  const pulseAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const floatAnim1 = useRef(new Animated.Value(0)).current;
-  const floatAnim2 = useRef(new Animated.Value(0)).current;
-  const floatAnim3 = useRef(new Animated.Value(0)).current;
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   const isEditMode = !!editEntry;
-
-  // Animate loader when analyzing
-  useEffect(() => {
-    if (isAnalyzing) {
-      // Fade in
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      // Pulse animation for the main circle
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
-      // Float animation for food icons
-      Animated.loop(
-        Animated.parallel([
-          Animated.sequence([
-            Animated.timing(floatAnim1, {
-              toValue: 1,
-              duration: 2000,
-              useNativeDriver: true,
-            }),
-            Animated.timing(floatAnim1, {
-              toValue: 0,
-              duration: 2000,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.timing(floatAnim2, {
-              toValue: 1,
-              duration: 2500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(floatAnim2, {
-              toValue: 0,
-              duration: 2500,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.timing(floatAnim3, {
-              toValue: 1,
-              duration: 1800,
-              useNativeDriver: true,
-            }),
-            Animated.timing(floatAnim3, {
-              toValue: 0,
-              duration: 1800,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      ).start();
-    } else {
-      // Fade out
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isAnalyzing]);
 
   console.log('MealEntryModal render - selectedImage:', selectedImage);
 
@@ -146,7 +57,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       setProtein(editEntry.protein);
       setCarbs(editEntry.carbs);
       setFat(editEntry.fat);
-      setDescriptionSelection(undefined); // Don't force cursor position when editing
     }
   }, [editEntry]);
 
@@ -168,41 +78,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       console.error('Error compressing image:', error);
       // If compression fails, return original
       return uri;
-    }
-  };
-
-  const analyzeImage = async (imageUri: string) => {
-    console.log('Analyzing image...', imageUri);
-    setIsAnalyzing(true);
-
-    try {
-      const result = await apiService.analyzeDietImage(imageUri);
-      console.log('Analysis result:', result);
-
-      // Update the form fields with the analysis results
-      setDescription(result.food_name);
-      setCalories(result.calories.toString());
-      setProtein(result.protein.toString());
-      setCarbs(result.carbs.toString());
-      setFat(result.fat.toString());
-
-      // Set cursor to the beginning of the description field
-      setDescriptionSelection({ start: 0, end: 0 });
-
-      // Alert.alert(
-      //   'Analysis Complete',
-      //   `Detected: ${result.food_name}\n\nNutrition information has been filled in automatically. You can edit if needed.`,
-      //   [{ text: 'OK' }]
-      // );
-    } catch (error) {
-      console.error('Error analyzing image:', error);
-      Alert.alert(
-        'Analysis Failed',
-        'Could not analyze the image. Please enter nutrition information manually.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -235,9 +110,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       console.log('Setting selected image to compressed version:', compressedUri);
       setSelectedImage(compressedUri);
       console.log('State update called');
-
-      // Analyze the image to get nutrition info
-      await analyzeImage(compressedUri);
     } else {
       console.log('Image selection was cancelled or no assets');
     }
@@ -273,9 +145,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       console.log('Setting selected image to compressed version:', compressedUri);
       setSelectedImage(compressedUri);
       console.log('State update called');
-
-      // Analyze the image to get nutrition info
-      await analyzeImage(compressedUri);
     } else {
       console.log('Camera was cancelled or no assets');
     }
@@ -311,7 +180,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
     setProtein('');
     setCarbs('');
     setFat('');
-    setDescriptionSelection(undefined);
   };
 
   const handleClose = () => {
@@ -394,8 +262,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                         />
                         <Pressable
                           style={[styles.changeImageOverlay, { position: 'relative', marginTop: 10 }]}
-                          onPress={() => setShowImagePicker(true)}
-                          disabled={isAnalyzing}>
+                          onPress={() => setShowImagePicker(true)}>
                           <Ionicons name="camera" size={24} color="#fff" />
                           <ThemedText style={styles.changeImageText}>
                             Change Photo
@@ -419,38 +286,18 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                     <View style={styles.formContainer}>
                       <ThemedText style={styles.label}>Description (optional)</ThemedText>
                       <TextInput
-                        ref={descriptionInputRef}
                         style={[
                           styles.input,
                           {
                             backgroundColor: colors.card,
                             color: colors.text,
                             borderColor: colors.border,
-                            opacity: isAnalyzing ? 0.5 : 1,
                           },
                         ]}
                         placeholder="e.g., Oatmeal with berries"
                         placeholderTextColor={colors.tabIconDefault}
                         value={description}
-                        onChangeText={(text) => {
-                          setDescription(text);
-                          // Clear selection control once user starts typing
-                          setDescriptionSelection(undefined);
-                        }}
-                        editable={!isAnalyzing}
-                        selection={descriptionSelection}
-                        onSelectionChange={() => {
-                          // Allow user to change cursor position after analysis
-                          if (!isAnalyzing) {
-                            setDescriptionSelection(undefined);
-                          }
-                        }}
-                        onFocus={() => {
-                          // Clear selection control when user focuses the field
-                          if (descriptionSelection) {
-                            setTimeout(() => setDescriptionSelection(undefined), 50);
-                          }
-                        }}
+                        onChangeText={setDescription}
                       />
 
                       <View style={styles.nutritionGrid}>
@@ -463,7 +310,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                                 backgroundColor: colors.card,
                                 color: colors.text,
                                 borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
                               },
                             ]}
                             placeholder="350"
@@ -471,7 +317,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                             keyboardType="numeric"
                             value={calories}
                             onChangeText={setCalories}
-                            editable={!isAnalyzing}
                           />
                         </View>
 
@@ -484,7 +329,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                                 backgroundColor: colors.card,
                                 color: colors.text,
                                 borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
                               },
                             ]}
                             placeholder="8"
@@ -492,7 +336,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                             keyboardType="numeric"
                             value={protein}
                             onChangeText={setProtein}
-                            editable={!isAnalyzing}
                           />
                         </View>
                       </View>
@@ -507,7 +350,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                                 backgroundColor: colors.card,
                                 color: colors.text,
                                 borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
                               },
                             ]}
                             placeholder="50"
@@ -515,7 +357,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                             keyboardType="numeric"
                             value={carbs}
                             onChangeText={setCarbs}
-                            editable={!isAnalyzing}
                           />
                         </View>
 
@@ -528,7 +369,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                                 backgroundColor: colors.card,
                                 color: colors.text,
                                 borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
                               },
                             ]}
                             placeholder="14"
@@ -536,7 +376,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                             keyboardType="numeric"
                             value={fat}
                             onChangeText={setFat}
-                            editable={!isAnalyzing}
                           />
                         </View>
                       </View>
@@ -547,11 +386,11 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                     style={[
                       styles.saveButton,
                       {
-                        backgroundColor: (selectedImage && !isAnalyzing) ? colors.tint : colors.tabIconDefault,
+                        backgroundColor: selectedImage ? colors.tint : colors.tabIconDefault,
                       },
                     ]}
                     onPress={handleSave}
-                    disabled={!selectedImage || isAnalyzing}>
+                    disabled={!selectedImage}>
                     <ThemedText style={styles.saveButtonText}>
                       {isEditMode ? 'Update Meal' : 'Save Meal'}
                     </ThemedText>
@@ -560,110 +399,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
               </TouchableWithoutFeedback>
             </View>
           </TouchableWithoutFeedback>
-
-          {/* Full Screen Animated Loader */}
-          {isAnalyzing && (
-            <Animated.View
-              style={[
-                styles.fullScreenLoader,
-                {
-                  opacity: fadeAnim,
-                }
-              ]}
-              pointerEvents="auto">
-              <View style={styles.loaderContent}>
-                {/* Floating Food Icons */}
-                <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      top: '20%',
-                      left: '15%',
-                      transform: [
-                        {
-                          translateY: floatAnim1.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -20],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🍎</ThemedText>
-                </Animated.View>
-
-                <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      top: '25%',
-                      right: '20%',
-                      transform: [
-                        {
-                          translateY: floatAnim2.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -25],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🥗</ThemedText>
-                </Animated.View>
-
-                <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      bottom: '30%',
-                      left: '20%',
-                      transform: [
-                        {
-                          translateY: floatAnim3.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -15],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🥑</ThemedText>
-                </Animated.View>
-
-                {/* Center Animated Circle */}
-                <Animated.View
-                  style={[
-                    styles.pulseCircle,
-                    {
-                      transform: [
-                        {
-                          scale: pulseAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [1, 1.2],
-                          }),
-                        },
-                      ],
-                      opacity: pulseAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 0.1],
-                      }),
-                    },
-                  ]}
-                />
-
-                {/* Main Content */}
-                <View style={styles.loaderCard}>
-                  <ActivityIndicator size="large" color="#007AFF" />
-                  <ThemedText style={styles.loaderTitle}>
-                    Analyzing your food
-                  </ThemedText>
-                  <ThemedText style={styles.loaderSubtitle}>
-                    Detecting nutrition information...
-                  </ThemedText>
-                </View>
-              </View>
-            </Animated.View>
-          )}
         </KeyboardAvoidingView>
       </Modal>
 
@@ -804,63 +539,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
-  },
-  fullScreenLoader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
-  },
-  loaderContent: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  floatingIcon: {
-    position: 'absolute',
-  },
-  foodIcon: {
-    fontSize: 48,
-    opacity: 0.6,
-  },
-  pulseCircle: {
-    position: 'absolute',
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: '#007AFF',
-  },
-  loaderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-    zIndex: 1,
-  },
-  loaderTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 20,
-    color: '#000',
-  },
-  loaderSubtitle: {
-    fontSize: 14,
-    marginTop: 8,
-    color: '#666',
   },
 });
