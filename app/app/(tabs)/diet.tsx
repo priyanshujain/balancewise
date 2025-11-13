@@ -98,9 +98,10 @@ export default function DietScreen() {
       )}
 
       <Pressable
+        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center"
         style={[styles.fab, { backgroundColor: colors.tint }]}
         onPress={handleAddNew}>
-        <Ionicons name="add" size={32} color="#fff" />
+        <Ionicons name="add" size={28} color="#FFFFFF" />
       </Pressable>
 
       <DietEntryModal
@@ -150,14 +151,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
