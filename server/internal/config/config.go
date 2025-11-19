@@ -14,6 +14,7 @@ type Config struct {
 	ServerURL    string
 	JWTSecret    string
 	HTTPLog      bool
+	OpenAIAPIKey string
 	Database     postgresconfig.Config
 	GoogleConfig GoogleConfig
 }
@@ -32,10 +33,11 @@ func LoadFromEnv() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:      getEnv("PORT", "8080"),
-		ServerURL: getEnv("SERVER_URL", "http://localhost:8080"),
-		JWTSecret: getEnv("JWT_SECRET", ""),
-		HTTPLog:   getEnv("HTTP_LOG", "true") == "true",
+		Port:         getEnv("PORT", "8080"),
+		ServerURL:    getEnv("SERVER_URL", "http://localhost:8080"),
+		JWTSecret:    getEnv("JWT_SECRET", ""),
+		HTTPLog:      getEnv("HTTP_LOG", "true") == "true",
+		OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
 		Database: postgresconfig.Config{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnvInt("DB_PORT", 5432),
@@ -61,6 +63,9 @@ func LoadFromEnv() (*Config, error) {
 	}
 	if cfg.Database.Password == "" {
 		return nil, fmt.Errorf("DB_PASSWORD is required")
+	}
+	if cfg.OpenAIAPIKey == "" {
+		return nil, fmt.Errorf("OPENAI_API_KEY is required")
 	}
 
 	return cfg, nil

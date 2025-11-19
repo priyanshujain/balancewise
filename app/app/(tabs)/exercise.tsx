@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { useState, useCallback, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,7 +41,7 @@ export default function ExerciseScreen() {
     } finally {
       setLoading(false);
     }
-  }, [workoutsLoaded]);
+  }, []);
 
   const loadHistory = useCallback(async (force = false) => {
     if (historyLoaded && !force) return;
@@ -55,7 +55,7 @@ export default function ExerciseScreen() {
     } finally {
       setLoading(false);
     }
-  }, [historyLoaded]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -190,7 +190,11 @@ export default function ExerciseScreen() {
               <Text className="text-sm"> 💪</Text>
             </Pressable>
           ) : (
-            <>
+            <ScrollView
+              className="flex-1"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 80 }}
+            >
               {workouts.map(workout => (
                 <Pressable
                   key={workout.id}
@@ -248,16 +252,15 @@ export default function ExerciseScreen() {
                   </Pressable>
                 </Pressable>
               ))}
-
-              <Pressable
-                className="w-14 h-14 rounded-full items-center justify-center self-end mt-6 mb-6 shadow-lg"
-                style={{ backgroundColor: colors.tint }}
-                onPress={() => router.push('/exercise/workout-builder')}
-              >
-                <MaterialIcons name="add" size={28} color="#FFFFFF" />
-              </Pressable>
-            </>
+            </ScrollView>
           )}
+            <Pressable
+              className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center"
+              style={[styles.fab, { backgroundColor: colors.tint }]}
+              onPress={() => router.push('/exercise/workout-builder')}
+            >
+              <MaterialIcons name="add" size={28} color="#FFFFFF" />
+            </Pressable>
         </View>
 
         <View key="1" className="flex-1">
@@ -340,3 +343,16 @@ export default function ExerciseScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  fab: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+});
