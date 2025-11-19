@@ -45,7 +45,7 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 				contentType := r.Header.Get("Content-Type")
 				isMultipart := strings.HasPrefix(contentType, "multipart/form-data")
 
-				if len(requestBody) > 1024 || isMultipart {
+				if len(requestBody) > 256 || isMultipart {
 					requestBodyLog = fmt.Sprintf("[%d bytes]", len(requestBody))
 				} else {
 					requestBodyLog = string(requestBody)

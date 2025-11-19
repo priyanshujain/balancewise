@@ -30,10 +30,11 @@ type AuthToken struct {
 }
 
 type User struct {
-	ID         uuid.UUID      `json:"id"`
-	Email      string         `json:"email"`
-	Name       string         `json:"name"`
-	ProfilePic sql.NullString `json:"profile_pic"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	ID            uuid.UUID      `json:"id"`
+	Email         string         `json:"email"`
+	Name          string         `json:"name"`
+	ProfilePic    sql.NullString `json:"profile_pic"`
+	GdriveAllowed bool           `json:"gdrive_allowed"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }

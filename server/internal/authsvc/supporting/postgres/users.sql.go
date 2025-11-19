@@ -19,7 +19,7 @@ INSERT INTO users (
     profile_pic
 ) VALUES (
     $1, $2, $3
-) RETURNING id, email, name, profile_pic, created_at, updated_at
+) RETURNING id, email, name, profile_pic, gdrive_allowed, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -36,6 +36,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.Name,
 		&i.ProfilePic,
+		&i.GdriveAllowed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -43,7 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, profile_pic, created_at, updated_at FROM users
+SELECT id, email, name, profile_pic, gdrive_allowed, created_at, updated_at FROM users
 WHERE email = $1
 `
 
@@ -55,6 +56,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Email,
 		&i.Name,
 		&i.ProfilePic,
+		&i.GdriveAllowed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -62,7 +64,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, profile_pic, created_at, updated_at FROM users
+SELECT id, email, name, profile_pic, gdrive_allowed, created_at, updated_at FROM users
 WHERE id = $1
 `
 
@@ -74,6 +76,36 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Email,
 		&i.Name,
 		&i.ProfilePic,
+		&i.GdriveAllowed,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateGDriveAllowed = `-- name: UpdateGDriveAllowed :one
+UPDATE users
+SET
+    gdrive_allowed = $1,
+    updated_at = NOW()
+WHERE id = $2
+RETURNING id, email, name, profile_pic, gdrive_allowed, created_at, updated_at
+`
+
+type UpdateGDriveAllowedParams struct {
+	GdriveAllowed bool      `json:"gdrive_allowed"`
+	ID            uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateGDriveAllowed(ctx context.Context, arg UpdateGDriveAllowedParams) (User, error) {
+	row := q.queryRow(ctx, q.updateGDriveAllowedStmt, updateGDriveAllowed, arg.GdriveAllowed, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ProfilePic,
+		&i.GdriveAllowed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -87,7 +119,7 @@ SET
     profile_pic = COALESCE($2, profile_pic),
     updated_at = NOW()
 WHERE id = $3
-RETURNING id, email, name, profile_pic, created_at, updated_at
+RETURNING id, email, name, profile_pic, gdrive_allowed, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -104,6 +136,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.Name,
 		&i.ProfilePic,
+		&i.GdriveAllowed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -117,7 +150,7 @@ SET
     profile_pic = COALESCE($2, profile_pic),
     updated_at = NOW()
 WHERE email = $3
-RETURNING id, email, name, profile_pic, created_at, updated_at
+RETURNING id, email, name, profile_pic, gdrive_allowed, created_at, updated_at
 `
 
 type UpdateUserByEmailParams struct {
@@ -134,6 +167,7 @@ func (q *Queries) UpdateUserByEmail(ctx context.Context, arg UpdateUserByEmailPa
 		&i.Email,
 		&i.Name,
 		&i.ProfilePic,
+		&i.GdriveAllowed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

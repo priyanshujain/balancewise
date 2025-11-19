@@ -26,6 +26,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	UpdateAuthState(ctx context.Context, arg UpdateAuthStateParams) (AuthState, error)
 	UpdateAuthTokenRefreshToken(ctx context.Context, arg UpdateAuthTokenRefreshTokenParams) error
+	UpdateGDriveAllowed(ctx context.Context, arg UpdateGDriveAllowedParams) (User, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserByEmail(ctx context.Context, arg UpdateUserByEmailParams) (User, error)
 }

@@ -33,10 +33,11 @@ type PollResponse struct {
 }
 
 type User struct {
-	ID      string `json:"id"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture,omitempty"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture,omitempty"`
+	GDriveAllowed bool   `json:"gdrive_allowed"`
 }
 
 type VerifyResponse struct {
@@ -61,6 +62,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/auth/callback", h.handleCallback)
 	h.HandleFunc("/auth/poll", corsMiddleware(h.handlePoll))
 	h.HandleFunc("/auth/verify", corsMiddleware(h.handleVerifyToken))
+	h.HandleFunc("/auth/profile", corsMiddleware(h.handleProfile))
 	h.HandleFunc("/auth/request-drive-permission", corsMiddleware(h.handleRequestDrivePermission))
 	h.HandleFunc("/auth/callback-drive", h.handleDriveCallback)
 	h.HandleFunc("/health", h.handleHealth)
@@ -198,10 +200,11 @@ func (h *httpHandler) handlePoll(w http.ResponseWriter, r *http.Request) {
 	if authenticated && user != nil {
 		response.Token = token
 		response.User = &User{
-			ID:      user.ID.String(),
-			Email:   user.Email,
-			Name:    user.Name,
-			Picture: user.ProfilePic,
+			ID:            user.ID.String(),
+			Email:         user.Email,
+			Name:          user.Name,
+			Picture:       user.ProfilePic,
+			GDriveAllowed: user.GDriveAllowed,
 		}
 	}
 
@@ -234,11 +237,46 @@ func (h *httpHandler) handleVerifyToken(w http.ResponseWriter, r *http.Request) 
 	response := VerifyResponse{
 		Valid: true,
 		User: &User{
-			ID:      user.ID.String(),
-			Email:   user.Email,
-			Name:    user.Name,
-			Picture: user.ProfilePic,
+			ID:            user.ID.String(),
+			Email:         user.Email,
+			Name:          user.Name,
+			Picture:       user.ProfilePic,
+			GDriveAllowed: user.GDriveAllowed,
 		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *httpHandler) handleProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	tokenString, err := jwt.ExtractToken(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ctx := r.Context()
+	user, err := h.svc.VerifyToken(ctx, tokenString)
+	if err != nil {
+		httpErr := httperrors.From(err)
+		http.Error(w, httpErr.Message, httpErr.HttpStatus)
+		return
+	}
+
+	response := &User{
+		ID:            user.ID.String(),
+		Email:         user.Email,
+		Name:          user.Name,
+		Picture:       user.ProfilePic,
+		GDriveAllowed: user.GDriveAllowed,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

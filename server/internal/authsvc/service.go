@@ -323,6 +323,11 @@ func (s *Service) HandleDriveCallback(ctx context.Context, state, code string) (
 
 	_ = s.stateRepo.Delete(ctx, state)
 
+	user, err = s.userRepo.UpdateGDriveAllowed(ctx, user.ID, true)
+	if err != nil {
+		return nil, domain.WrapError("failed to update gdrive_allowed", err)
+	}
+
 	slog.Info("successfully granted Drive permissions", "email", user.Email, "user_id", user.ID)
 	return user, nil
 }

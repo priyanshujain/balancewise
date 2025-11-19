@@ -8,12 +8,13 @@ import (
 )
 
 type User struct {
-	ID         uuid.UUID
-	Email      string
-	Name       string
-	ProfilePic string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            uuid.UUID
+	Email         string
+	Name          string
+	ProfilePic    string
+	GDriveAllowed bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type UserRepository interface {
@@ -22,4 +23,5 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Update(ctx context.Context, id uuid.UUID, name *string, profilePic *string) (*User, error)
 	UpdateByEmail(ctx context.Context, email string, name *string, profilePic *string) (*User, error)
+	UpdateGDriveAllowed(ctx context.Context, id uuid.UUID, allowed bool) (*User, error)
 }
