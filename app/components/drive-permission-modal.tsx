@@ -23,15 +23,67 @@ export function DrivePermissionModal({ visible, onClose, onSuccess }: DrivePermi
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { token, setDrivePermission } = useAuth();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      stopPolling();
     };
   }, []);
+
+  const handleCancel = () => {
+    stopPolling();
+    setIsLoading(false);
+    setStatusMessage('');
+    onClose();
+  };
+
+  const pollForPermission = async () => {
+    if (!token) return;
+
+    setStatusMessage('Checking authorization...');
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const profile = await apiService.getProfile(token);
+
+        if (profile.gdrive_allowed) {
+          stopPolling();
+          setStatusMessage('Permission granted! Updating...');
+
+          await setDrivePermission(true);
+          setIsLoading(false);
+          setStatusMessage('');
+          onSuccess();
+          onClose();
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, 1000);
+
+    pollingTimeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setIsLoading(false);
+      setStatusMessage('');
+      Alert.alert(
+        'Authorization Timeout',
+        'The authorization process timed out. Please try again.'
+      );
+    }, 120000);
+  };
 
   const handleGrantPermission = async () => {
     if (!token) {
@@ -47,33 +99,13 @@ export function DrivePermissionModal({ visible, onClose, onSuccess }: DrivePermi
 
       setStatusMessage('Opening browser...');
 
-      const result = await WebBrowser.openBrowserAsync(authUrl);
+      await WebBrowser.openBrowserAsync(authUrl);
 
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        setIsLoading(false);
-        setStatusMessage('');
-        return;
-      }
-
-      setStatusMessage('Permission granted! Updating...');
-
-      timeoutRef.current = setTimeout(async () => {
-        try {
-          await setDrivePermission(true);
-          setIsLoading(false);
-          setStatusMessage('');
-          onSuccess();
-          onClose();
-        } catch (error) {
-          console.error('Failed to update Drive permission:', error);
-          setIsLoading(false);
-          setStatusMessage('');
-          Alert.alert('Error', 'Failed to update Drive permission. Please try again.');
-        }
-      }, 2000);
+      pollForPermission();
 
     } catch (error) {
       console.error('Drive permission error:', error);
+      stopPolling();
       setIsLoading(false);
       setStatusMessage('');
       Alert.alert(
@@ -87,14 +119,13 @@ export function DrivePermissionModal({ visible, onClose, onSuccess }: DrivePermi
     <Modal
       visible={visible}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleCancel}
     >
       <ThemedView className="flex-1">
-        {/* Close button */}
+        {/* Close/Cancel button */}
         <Pressable
           className="absolute top-14 right-5 z-10 p-2"
-          onPress={onClose}
-          disabled={isLoading}
+          onPress={handleCancel}
         >
           <Ionicons name="close" size={28} color={colors.text} />
         </Pressable>
@@ -133,7 +164,7 @@ export function DrivePermissionModal({ visible, onClose, onSuccess }: DrivePermi
             <View className="flex-row items-start gap-4">
               <Ionicons name="folder-outline" size={24} color={colors.tint} />
               <Text className="flex-1 text-[15px] leading-6" style={{ color: colors.text }}>
-                Organized in a "BalanceWise" folder you can access anytime
+                Organized in a {'"'}BalanceWise{'"'} folder you can access anytime
               </Text>
             </View>
 

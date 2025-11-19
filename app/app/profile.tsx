@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, Image, Alert, Platform, ScrollView, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, Image, Alert, Platform, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/auth-context';
@@ -10,6 +10,16 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  const profileImageUri = useMemo(() => {
+    if (!user?.picture) return null;
+
+    if (user.picture.startsWith('http') || user.picture.startsWith('data:')) {
+      return user.picture;
+    }
+
+    return `data:image/jpeg;base64,${user.picture}`;
+  }, [user?.picture]);
 
   const handleSignOut = async () => {
     if (Platform.OS === 'web') {
@@ -49,9 +59,9 @@ export default function ProfileScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
       <View className="items-center py-8 px-5">
         <View className="mb-6">
-          {user?.picture ? (
+          {profileImageUri ? (
             <Image
-              source={{ uri: user.picture }}
+              source={{ uri: profileImageUri }}
               className="w-32 h-32 rounded-full border-4 border-gray-200"
             />
           ) : (
