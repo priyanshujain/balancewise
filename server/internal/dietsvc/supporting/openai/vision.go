@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -48,7 +49,7 @@ Provide your best estimates based on typical portion sizes. Do not include any e
 	params := openai.ChatCompletionNewParams{
 		Messages:            messages,
 		Model:               openai.ChatModelGPT5Mini,
-		MaxCompletionTokens: openai.Int(500),
+		MaxCompletionTokens: openai.Int(5000),
 	}
 
 	response, err := v.client.Chat.Completions.New(ctx, params)
@@ -71,6 +72,7 @@ Provide your best estimates based on typical portion sizes. Do not include any e
 	}
 
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
+		slog.Error("failed to parse openai response", "content", content, "error", err)
 		return nil, fmt.Errorf("failed to parse openai response: %w", err)
 	}
 
