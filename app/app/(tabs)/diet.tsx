@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
 import { DietEntryModal } from '@/components/diet-entry-modal';
 import { DrivePermissionModal } from '@/components/drive-permission-modal';
 import { DietCard } from '@/components/diet-card';
@@ -75,14 +74,14 @@ export default function DietScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
       {loading ? (
-        <ThemedView style={styles.loadingContainer}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.tint} />
-          <ThemedText style={[styles.loadingText, { color: colors.tabIconDefault }]}>
+          <Text className="mt-4 text-base" style={{ color: colors.tabIconDefault }}>
             Loading diet entries...
-          </ThemedText>
-        </ThemedView>
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={dietEntries}
@@ -94,24 +93,24 @@ export default function DietScreen() {
               onDelete={handleDeleteEntry}
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
           ListEmptyComponent={
-            <ThemedView style={styles.emptyContainer}>
+            <View className="flex-1 items-center justify-center pt-24 px-10">
               <Ionicons name="restaurant-outline" size={64} color={colors.tabIconDefault} />
-              <ThemedText style={[styles.emptyText, { color: colors.tabIconDefault }]}>
+              <Text className="text-lg font-semibold mt-4" style={{ color: colors.tabIconDefault }}>
                 No diet entries logged yet
-              </ThemedText>
-              <ThemedText style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
+              </Text>
+              <Text className="text-sm mt-2 text-center" style={{ color: colors.tabIconDefault }}>
                 Tap the + button to add your first entry
-              </ThemedText>
-            </ThemedView>
+              </Text>
+            </View>
           }
         />
       )}
 
       <Pressable
-        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center"
-        style={[styles.fab, { backgroundColor: colors.tint }]}
+        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center shadow-lg"
+        style={{ backgroundColor: colors.tint }}
         onPress={handleAddNew}>
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </Pressable>
@@ -129,53 +128,6 @@ export default function DietScreen() {
         onClose={() => setShowDriveModal(false)}
         onSuccess={handleDrivePermissionSuccess}
       />
-    </ThemedView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    marginTop: 22
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  listContent: {
-    paddingTop: 16,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 100,
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  fab: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-});

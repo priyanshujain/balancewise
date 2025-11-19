@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Alert,
+  ActionSheetIOS,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -48,6 +49,26 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
 
   console.log('MealEntryModal render - selectedImage:', selectedImage);
 
+  const showImagePickerOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhoto();
+          } else if (buttonIndex === 2) {
+            pickImageFromGallery();
+          }
+        }
+      );
+    } else {
+      setShowImagePicker(true);
+    }
+  };
+
   // Populate form when editing
   useEffect(() => {
     if (editEntry) {
@@ -84,11 +105,23 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   const pickImageFromGallery = async () => {
     console.log('pickImageFromGallery called');
     setIsPickingImage(true);
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    console.log('Permission status:', status);
+    try {
+      const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+      console.log('Current permission status:', currentPermission.status, 'canAskAgain:', currentPermission.canAskAgain);
 
-    if (status !== 'granted') {
-      console.log('Permission not granted');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('Permission status after request:', status);
+
+      if (status !== 'granted') {
+        console.log('Permission not granted');
+        Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+        setIsPickingImage(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Error requesting media library permission:', error);
+      Alert.alert('Error', 'Failed to request photo library permission.');
+      setIsPickingImage(false);
       return;
     }
 
@@ -120,11 +153,23 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   const takePhoto = async () => {
     console.log('takePhoto called');
     setIsPickingImage(true);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    console.log('Camera permission status:', status);
+    try {
+      const currentPermission = await ImagePicker.getCameraPermissionsAsync();
+      console.log('Current camera permission:', currentPermission.status, 'canAskAgain:', currentPermission.canAskAgain);
 
-    if (status !== 'granted') {
-      console.log('Camera permission not granted');
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('Camera permission status after request:', status);
+
+      if (status !== 'granted') {
+        console.log('Camera permission not granted');
+        Alert.alert('Permission Required', 'Please allow access to your camera to take photos.');
+        setIsPickingImage(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Error requesting camera permission:', error);
+      Alert.alert('Error', 'Failed to request camera permission.');
+      setIsPickingImage(false);
       return;
     }
 
@@ -262,7 +307,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                         />
                         <Pressable
                           style={[styles.changeImageOverlay, { position: 'relative', marginTop: 10 }]}
-                          onPress={() => setShowImagePicker(true)}>
+                          onPress={showImagePickerOptions}>
                           <Ionicons name="camera" size={24} color="#fff" />
                           <ThemedText style={styles.changeImageText}>
                             Change Photo
@@ -275,7 +320,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                           styles.imagePlaceholder,
                           { borderColor: colors.tint },
                         ]}
-                        onPress={() => setShowImagePicker(true)}>
+                        onPress={showImagePickerOptions}>
                         <Ionicons name="camera" size={48} color={colors.tint} />
                         <ThemedText style={[styles.placeholderText, { color: colors.tint }]}>
                           Tap to add photo
