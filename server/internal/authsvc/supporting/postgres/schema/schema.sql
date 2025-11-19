@@ -24,16 +24,12 @@ CREATE TABLE IF NOT EXISTS auth_state (
 CREATE INDEX IF NOT EXISTS idx_auth_state_expires_at ON auth_state(expires_at);
 CREATE INDEX IF NOT EXISTS idx_auth_state_authenticated ON auth_state(authenticated);
 
--- Auth tokens table (JWT and refresh tokens)
+-- Auth tokens table (refresh tokens only, one per user)
 CREATE TABLE IF NOT EXISTS auth_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    jwt_token TEXT NOT NULL,
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     refresh_token TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_auth_tokens_jwt_token ON auth_tokens(jwt_token);
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);

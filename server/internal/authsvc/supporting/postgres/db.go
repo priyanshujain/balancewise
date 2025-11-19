@@ -27,20 +27,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createAuthStateStmt, err = db.PrepareContext(ctx, createAuthState); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAuthState: %w", err)
 	}
-	if q.createAuthTokenStmt, err = db.PrepareContext(ctx, createAuthToken); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateAuthToken: %w", err)
-	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
 	if q.deleteAuthStateStmt, err = db.PrepareContext(ctx, deleteAuthState); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteAuthState: %w", err)
 	}
-	if q.deleteAuthTokenStmt, err = db.PrepareContext(ctx, deleteAuthToken); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteAuthToken: %w", err)
-	}
-	if q.deleteAuthTokenByJWTStmt, err = db.PrepareContext(ctx, deleteAuthTokenByJWT); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteAuthTokenByJWT: %w", err)
+	if q.deleteAuthTokenByUserIDStmt, err = db.PrepareContext(ctx, deleteAuthTokenByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAuthTokenByUserID: %w", err)
 	}
 	if q.deleteExpiredAuthStatesStmt, err = db.PrepareContext(ctx, deleteExpiredAuthStates); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredAuthStates: %w", err)
@@ -51,11 +45,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAuthStateStmt, err = db.PrepareContext(ctx, getAuthState); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAuthState: %w", err)
 	}
-	if q.getAuthTokenByJWTStmt, err = db.PrepareContext(ctx, getAuthTokenByJWT); err != nil {
-		return nil, fmt.Errorf("error preparing query GetAuthTokenByJWT: %w", err)
-	}
-	if q.getAuthTokensByUserIDStmt, err = db.PrepareContext(ctx, getAuthTokensByUserID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetAuthTokensByUserID: %w", err)
+	if q.getAuthTokenByUserIDStmt, err = db.PrepareContext(ctx, getAuthTokenByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAuthTokenByUserID: %w", err)
 	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
@@ -78,6 +69,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateUserByEmailStmt, err = db.PrepareContext(ctx, updateUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserByEmail: %w", err)
 	}
+	if q.upsertAuthTokenStmt, err = db.PrepareContext(ctx, upsertAuthToken); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertAuthToken: %w", err)
+	}
 	return &q, nil
 }
 
@@ -86,11 +80,6 @@ func (q *Queries) Close() error {
 	if q.createAuthStateStmt != nil {
 		if cerr := q.createAuthStateStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAuthStateStmt: %w", cerr)
-		}
-	}
-	if q.createAuthTokenStmt != nil {
-		if cerr := q.createAuthTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createAuthTokenStmt: %w", cerr)
 		}
 	}
 	if q.createUserStmt != nil {
@@ -103,14 +92,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteAuthStateStmt: %w", cerr)
 		}
 	}
-	if q.deleteAuthTokenStmt != nil {
-		if cerr := q.deleteAuthTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteAuthTokenStmt: %w", cerr)
-		}
-	}
-	if q.deleteAuthTokenByJWTStmt != nil {
-		if cerr := q.deleteAuthTokenByJWTStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteAuthTokenByJWTStmt: %w", cerr)
+	if q.deleteAuthTokenByUserIDStmt != nil {
+		if cerr := q.deleteAuthTokenByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAuthTokenByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteExpiredAuthStatesStmt != nil {
@@ -128,14 +112,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getAuthStateStmt: %w", cerr)
 		}
 	}
-	if q.getAuthTokenByJWTStmt != nil {
-		if cerr := q.getAuthTokenByJWTStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getAuthTokenByJWTStmt: %w", cerr)
-		}
-	}
-	if q.getAuthTokensByUserIDStmt != nil {
-		if cerr := q.getAuthTokensByUserIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getAuthTokensByUserIDStmt: %w", cerr)
+	if q.getAuthTokenByUserIDStmt != nil {
+		if cerr := q.getAuthTokenByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAuthTokenByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.getUserByEmailStmt != nil {
@@ -171,6 +150,11 @@ func (q *Queries) Close() error {
 	if q.updateUserByEmailStmt != nil {
 		if cerr := q.updateUserByEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserByEmailStmt: %w", cerr)
+		}
+	}
+	if q.upsertAuthTokenStmt != nil {
+		if cerr := q.upsertAuthTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertAuthTokenStmt: %w", cerr)
 		}
 	}
 	return err
@@ -213,16 +197,13 @@ type Queries struct {
 	db                              DBTX
 	tx                              *sql.Tx
 	createAuthStateStmt             *sql.Stmt
-	createAuthTokenStmt             *sql.Stmt
 	createUserStmt                  *sql.Stmt
 	deleteAuthStateStmt             *sql.Stmt
-	deleteAuthTokenStmt             *sql.Stmt
-	deleteAuthTokenByJWTStmt        *sql.Stmt
+	deleteAuthTokenByUserIDStmt     *sql.Stmt
 	deleteExpiredAuthStatesStmt     *sql.Stmt
 	deleteExpiredAuthTokensStmt     *sql.Stmt
 	getAuthStateStmt                *sql.Stmt
-	getAuthTokenByJWTStmt           *sql.Stmt
-	getAuthTokensByUserIDStmt       *sql.Stmt
+	getAuthTokenByUserIDStmt        *sql.Stmt
 	getUserByEmailStmt              *sql.Stmt
 	getUserByIDStmt                 *sql.Stmt
 	updateAuthStateStmt             *sql.Stmt
@@ -230,6 +211,7 @@ type Queries struct {
 	updateGDriveAllowedStmt         *sql.Stmt
 	updateUserStmt                  *sql.Stmt
 	updateUserByEmailStmt           *sql.Stmt
+	upsertAuthTokenStmt             *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -237,16 +219,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                              tx,
 		tx:                              tx,
 		createAuthStateStmt:             q.createAuthStateStmt,
-		createAuthTokenStmt:             q.createAuthTokenStmt,
 		createUserStmt:                  q.createUserStmt,
 		deleteAuthStateStmt:             q.deleteAuthStateStmt,
-		deleteAuthTokenStmt:             q.deleteAuthTokenStmt,
-		deleteAuthTokenByJWTStmt:        q.deleteAuthTokenByJWTStmt,
+		deleteAuthTokenByUserIDStmt:     q.deleteAuthTokenByUserIDStmt,
 		deleteExpiredAuthStatesStmt:     q.deleteExpiredAuthStatesStmt,
 		deleteExpiredAuthTokensStmt:     q.deleteExpiredAuthTokensStmt,
 		getAuthStateStmt:                q.getAuthStateStmt,
-		getAuthTokenByJWTStmt:           q.getAuthTokenByJWTStmt,
-		getAuthTokensByUserIDStmt:       q.getAuthTokensByUserIDStmt,
+		getAuthTokenByUserIDStmt:        q.getAuthTokenByUserIDStmt,
 		getUserByEmailStmt:              q.getUserByEmailStmt,
 		getUserByIDStmt:                 q.getUserByIDStmt,
 		updateAuthStateStmt:             q.updateAuthStateStmt,
@@ -254,5 +233,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateGDriveAllowedStmt:         q.updateGDriveAllowedStmt,
 		updateUserStmt:                  q.updateUserStmt,
 		updateUserByEmailStmt:           q.updateUserByEmailStmt,
+		upsertAuthTokenStmt:             q.upsertAuthTokenStmt,
 	}
 }

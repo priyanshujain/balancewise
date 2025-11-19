@@ -13,60 +13,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const createAuthToken = `-- name: CreateAuthToken :one
-INSERT INTO auth_tokens (
-    user_id,
-    jwt_token,
-    refresh_token,
-    expires_at
-) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, user_id, jwt_token, refresh_token, expires_at, created_at
-`
-
-type CreateAuthTokenParams struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	JwtToken     string         `json:"jwt_token"`
-	RefreshToken sql.NullString `json:"refresh_token"`
-	ExpiresAt    time.Time      `json:"expires_at"`
-}
-
-func (q *Queries) CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) (AuthToken, error) {
-	row := q.queryRow(ctx, q.createAuthTokenStmt, createAuthToken,
-		arg.UserID,
-		arg.JwtToken,
-		arg.RefreshToken,
-		arg.ExpiresAt,
-	)
-	var i AuthToken
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.JwtToken,
-		&i.RefreshToken,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const deleteAuthToken = `-- name: DeleteAuthToken :exec
+const deleteAuthTokenByUserID = `-- name: DeleteAuthTokenByUserID :exec
 DELETE FROM auth_tokens
-WHERE id = $1
+WHERE user_id = $1
 `
 
-func (q *Queries) DeleteAuthToken(ctx context.Context, id uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteAuthTokenStmt, deleteAuthToken, id)
-	return err
-}
-
-const deleteAuthTokenByJWT = `-- name: DeleteAuthTokenByJWT :exec
-DELETE FROM auth_tokens
-WHERE jwt_token = $1
-`
-
-func (q *Queries) DeleteAuthTokenByJWT(ctx context.Context, jwtToken string) error {
-	_, err := q.exec(ctx, q.deleteAuthTokenByJWTStmt, deleteAuthTokenByJWT, jwtToken)
+func (q *Queries) DeleteAuthTokenByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAuthTokenByUserIDStmt, deleteAuthTokenByUserID, userID)
 	return err
 }
 
@@ -80,18 +33,16 @@ func (q *Queries) DeleteExpiredAuthTokens(ctx context.Context) error {
 	return err
 }
 
-const getAuthTokenByJWT = `-- name: GetAuthTokenByJWT :one
-SELECT id, user_id, jwt_token, refresh_token, expires_at, created_at FROM auth_tokens
-WHERE jwt_token = $1
+const getAuthTokenByUserID = `-- name: GetAuthTokenByUserID :one
+SELECT user_id, refresh_token, expires_at, created_at FROM auth_tokens
+WHERE user_id = $1
 `
 
-func (q *Queries) GetAuthTokenByJWT(ctx context.Context, jwtToken string) (AuthToken, error) {
-	row := q.queryRow(ctx, q.getAuthTokenByJWTStmt, getAuthTokenByJWT, jwtToken)
+func (q *Queries) GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (AuthToken, error) {
+	row := q.queryRow(ctx, q.getAuthTokenByUserIDStmt, getAuthTokenByUserID, userID)
 	var i AuthToken
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
-		&i.JwtToken,
 		&i.RefreshToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,
@@ -99,54 +50,49 @@ func (q *Queries) GetAuthTokenByJWT(ctx context.Context, jwtToken string) (AuthT
 	return i, err
 }
 
-const getAuthTokensByUserID = `-- name: GetAuthTokensByUserID :many
-SELECT id, user_id, jwt_token, refresh_token, expires_at, created_at FROM auth_tokens
-WHERE user_id = $1
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetAuthTokensByUserID(ctx context.Context, userID uuid.UUID) ([]AuthToken, error) {
-	rows, err := q.query(ctx, q.getAuthTokensByUserIDStmt, getAuthTokensByUserID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuthToken
-	for rows.Next() {
-		var i AuthToken
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.JwtToken,
-			&i.RefreshToken,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateAuthTokenRefreshToken = `-- name: UpdateAuthTokenRefreshToken :exec
 UPDATE auth_tokens
 SET refresh_token = $2
-WHERE id = $1
+WHERE user_id = $1
 `
 
 type UpdateAuthTokenRefreshTokenParams struct {
-	ID           uuid.UUID      `json:"id"`
+	UserID       uuid.UUID      `json:"user_id"`
 	RefreshToken sql.NullString `json:"refresh_token"`
 }
 
 func (q *Queries) UpdateAuthTokenRefreshToken(ctx context.Context, arg UpdateAuthTokenRefreshTokenParams) error {
-	_, err := q.exec(ctx, q.updateAuthTokenRefreshTokenStmt, updateAuthTokenRefreshToken, arg.ID, arg.RefreshToken)
+	_, err := q.exec(ctx, q.updateAuthTokenRefreshTokenStmt, updateAuthTokenRefreshToken, arg.UserID, arg.RefreshToken)
 	return err
+}
+
+const upsertAuthToken = `-- name: UpsertAuthToken :one
+INSERT INTO auth_tokens (
+    user_id,
+    refresh_token,
+    expires_at
+) VALUES (
+    $1, $2, $3
+) ON CONFLICT (user_id) DO UPDATE SET
+    refresh_token = COALESCE(NULLIF($2, ''), auth_tokens.refresh_token),
+    expires_at = $3
+RETURNING user_id, refresh_token, expires_at, created_at
+`
+
+type UpsertAuthTokenParams struct {
+	UserID       uuid.UUID      `json:"user_id"`
+	RefreshToken sql.NullString `json:"refresh_token"`
+	ExpiresAt    time.Time      `json:"expires_at"`
+}
+
+func (q *Queries) UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (AuthToken, error) {
+	row := q.queryRow(ctx, q.upsertAuthTokenStmt, upsertAuthToken, arg.UserID, arg.RefreshToken, arg.ExpiresAt)
+	var i AuthToken
+	err := row.Scan(
+		&i.UserID,
+		&i.RefreshToken,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }

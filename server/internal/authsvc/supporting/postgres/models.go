@@ -21,9 +21,7 @@ type AuthState struct {
 }
 
 type AuthToken struct {
-	ID           uuid.UUID      `json:"id"`
 	UserID       uuid.UUID      `json:"user_id"`
-	JwtToken     string         `json:"jwt_token"`
 	RefreshToken sql.NullString `json:"refresh_token"`
 	ExpiresAt    time.Time      `json:"expires_at"`
 	CreatedAt    time.Time      `json:"created_at"`

@@ -19,15 +19,14 @@ func NewTokenRepository(db *sql.DB) domain.TokenRepository {
 	}
 }
 
-func (r *tokenRepository) Create(ctx context.Context, token domain.AuthToken) (*domain.AuthToken, error) {
+func (r *tokenRepository) Upsert(ctx context.Context, token domain.AuthToken) (*domain.AuthToken, error) {
 	var refreshToken sql.NullString
-	if token.RefreshToken != nil {
+	if token.RefreshToken != nil && *token.RefreshToken != "" {
 		refreshToken = sql.NullString{String: *token.RefreshToken, Valid: true}
 	}
 
-	dbToken, err := r.queries.CreateAuthToken(ctx, CreateAuthTokenParams{
+	dbToken, err := r.queries.UpsertAuthToken(ctx, UpsertAuthTokenParams{
 		UserID:       token.UserID,
-		JwtToken:     token.JWTToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    token.ExpiresAt,
 	})
@@ -38,8 +37,8 @@ func (r *tokenRepository) Create(ctx context.Context, token domain.AuthToken) (*
 	return toDomainAuthToken(dbToken), nil
 }
 
-func (r *tokenRepository) GetByJWT(ctx context.Context, jwtToken string) (*domain.AuthToken, error) {
-	dbToken, err := r.queries.GetAuthTokenByJWT(ctx, jwtToken)
+func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.AuthToken, error) {
+	dbToken, err := r.queries.GetAuthTokenByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -50,33 +49,15 @@ func (r *tokenRepository) GetByJWT(ctx context.Context, jwtToken string) (*domai
 	return toDomainAuthToken(dbToken), nil
 }
 
-func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.AuthToken, error) {
-	dbTokens, err := r.queries.GetAuthTokensByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	tokens := make([]domain.AuthToken, len(dbTokens))
-	for i, dbToken := range dbTokens {
-		tokens[i] = *toDomainAuthToken(dbToken)
-	}
-
-	return tokens, nil
-}
-
-func (r *tokenRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.queries.DeleteAuthToken(ctx, id)
-}
-
-func (r *tokenRepository) DeleteByJWT(ctx context.Context, jwtToken string) error {
-	return r.queries.DeleteAuthTokenByJWT(ctx, jwtToken)
-}
-
-func (r *tokenRepository) UpdateRefreshToken(ctx context.Context, id uuid.UUID, refreshToken string) error {
+func (r *tokenRepository) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error {
 	return r.queries.UpdateAuthTokenRefreshToken(ctx, UpdateAuthTokenRefreshTokenParams{
-		ID:           id,
+		UserID:       userID,
 		RefreshToken: sql.NullString{String: refreshToken, Valid: true},
 	})
+}
+
+func (r *tokenRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	return r.queries.DeleteAuthTokenByUserID(ctx, userID)
 }
 
 func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
@@ -85,9 +66,7 @@ func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
 
 func toDomainAuthToken(dbToken AuthToken) *domain.AuthToken {
 	token := &domain.AuthToken{
-		ID:        dbToken.ID,
 		UserID:    dbToken.UserID,
-		JWTToken:  dbToken.JwtToken,
 		ExpiresAt: dbToken.ExpiresAt,
 		CreatedAt: dbToken.CreatedAt,
 	}

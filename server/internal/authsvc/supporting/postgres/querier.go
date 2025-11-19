@@ -12,16 +12,13 @@ import (
 
 type Querier interface {
 	CreateAuthState(ctx context.Context, arg CreateAuthStateParams) (AuthState, error)
-	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) (AuthToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteAuthState(ctx context.Context, state string) error
-	DeleteAuthToken(ctx context.Context, id uuid.UUID) error
-	DeleteAuthTokenByJWT(ctx context.Context, jwtToken string) error
+	DeleteAuthTokenByUserID(ctx context.Context, userID uuid.UUID) error
 	DeleteExpiredAuthStates(ctx context.Context) error
 	DeleteExpiredAuthTokens(ctx context.Context) error
 	GetAuthState(ctx context.Context, state string) (AuthState, error)
-	GetAuthTokenByJWT(ctx context.Context, jwtToken string) (AuthToken, error)
-	GetAuthTokensByUserID(ctx context.Context, userID uuid.UUID) ([]AuthToken, error)
+	GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (AuthToken, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	UpdateAuthState(ctx context.Context, arg UpdateAuthStateParams) (AuthState, error)
@@ -29,6 +26,7 @@ type Querier interface {
 	UpdateGDriveAllowed(ctx context.Context, arg UpdateGDriveAllowedParams) (User, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserByEmail(ctx context.Context, arg UpdateUserByEmailParams) (User, error)
+	UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (AuthToken, error)
 }
 
 var _ Querier = (*Queries)(nil)

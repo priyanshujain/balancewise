@@ -121,20 +121,13 @@ func (s *Service) HandleCallback(ctx context.Context, state, code string) (*doma
 		slog.Info("updated existing user", "email", user.Email)
 	}
 
-	// Generate JWT
-	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
-	if err != nil {
-		return nil, "", domain.WrapError("failed to generate JWT", err)
-	}
-
-	// Store token in database
+	// Store refresh token in database
 	authToken := domain.AuthToken{
 		UserID:       user.ID,
-		JWTToken:     jwtToken,
 		RefreshToken: &token.RefreshToken,
 		ExpiresAt:    time.Now().Add(30 * 24 * time.Hour), // 30 days
 	}
-	_, err = s.tokenRepo.Create(ctx, authToken)
+	_, err = s.tokenRepo.Upsert(ctx, authToken)
 	if err != nil {
 		return nil, "", domain.WrapError("failed to store token", err)
 	}
@@ -145,74 +138,56 @@ func (s *Service) HandleCallback(ctx context.Context, state, code string) (*doma
 		return nil, "", domain.WrapError("failed to update state", err)
 	}
 
+	// Generate JWT
+	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
+	if err != nil {
+		return nil, "", domain.WrapError("failed to generate JWT", err)
+	}
+
 	slog.Info("successfully authenticated user", "email", user.Email, "state", state)
 	return user, jwtToken, nil
 }
 
 // PollAuth checks if authentication is complete for a given state
 func (s *Service) PollAuth(ctx context.Context, state string) (authenticated bool, user *domain.User, token string, err error) {
-	// Get state from database
 	authState, err := s.stateRepo.Get(ctx, state)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return false, nil, "", nil // State doesn't exist, return not authenticated
+			return false, nil, "", nil
 		}
 		return false, nil, "", domain.WrapError("failed to get state", err)
 	}
 
-	// Check if expired
 	if time.Now().After(authState.ExpiresAt) {
 		return false, nil, "", nil
 	}
 
-	// Check if authenticated
 	if !authState.Authenticated || authState.UserID == nil {
 		return false, nil, "", nil
 	}
 
-	// Get user
 	user, err = s.userRepo.GetByID(ctx, *authState.UserID)
 	if err != nil {
 		return false, nil, "", domain.WrapError("failed to get user", err)
 	}
 
-	// Get token
-	tokens, err := s.tokenRepo.GetByUserID(ctx, *authState.UserID)
+	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
 	if err != nil {
-		return false, nil, "", domain.WrapError("failed to get token", err)
+		return false, nil, "", domain.WrapError("failed to generate JWT", err)
 	}
 
-	if len(tokens) == 0 {
-		return false, nil, "", fmt.Errorf("no tokens found for user")
-	}
-
-	// Get the most recent token
-	token = tokens[0].JWTToken
-
-	// Delete state after successful poll
 	_ = s.stateRepo.Delete(ctx, state)
 
-	return true, user, token, nil
+	return true, user, jwtToken, nil
 }
 
 // VerifyToken validates a JWT token and returns the user
 func (s *Service) VerifyToken(ctx context.Context, tokenString string) (*domain.User, error) {
-	// Verify JWT
 	claims, err := s.jwtSvc.VerifyToken(tokenString)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
 	}
 
-	// Check if token exists in database
-	_, err = s.tokenRepo.GetByJWT(ctx, tokenString)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, domain.ErrInvalidToken
-		}
-		return nil, domain.WrapError("failed to get token", err)
-	}
-
-	// Get user
 	userID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
@@ -293,32 +268,14 @@ func (s *Service) HandleDriveCallback(ctx context.Context, state, code string) (
 		return nil, domain.WrapError("failed to get user", err)
 	}
 
-	tokens, err := s.tokenRepo.GetByUserID(ctx, user.ID)
-	if err != nil {
-		return nil, domain.WrapError("failed to get existing tokens", err)
+	authToken := domain.AuthToken{
+		UserID:       user.ID,
+		RefreshToken: &token.RefreshToken,
+		ExpiresAt:    time.Now().Add(30 * 24 * time.Hour),
 	}
-
-	if len(tokens) > 0 {
-		err = s.tokenRepo.UpdateRefreshToken(ctx, tokens[0].ID, token.RefreshToken)
-		if err != nil {
-			return nil, domain.WrapError("failed to update refresh token", err)
-		}
-	} else {
-		jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
-		if err != nil {
-			return nil, domain.WrapError("failed to generate JWT", err)
-		}
-
-		authToken := domain.AuthToken{
-			UserID:       user.ID,
-			JWTToken:     jwtToken,
-			RefreshToken: &token.RefreshToken,
-			ExpiresAt:    time.Now().Add(30 * 24 * time.Hour),
-		}
-		_, err = s.tokenRepo.Create(ctx, authToken)
-		if err != nil {
-			return nil, domain.WrapError("failed to store token", err)
-		}
+	_, err = s.tokenRepo.Upsert(ctx, authToken)
+	if err != nil {
+		return nil, domain.WrapError("failed to store token", err)
 	}
 
 	_ = s.stateRepo.Delete(ctx, state)
