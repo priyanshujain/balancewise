@@ -21,10 +21,7 @@ export function ActionSheet({ visible, onClose, title, options }: ActionSheetPro
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  console.log('ActionSheet render - visible:', visible);
-
-  const handleOptionPress = (onPress: () => void, label: string) => {
-    console.log('ActionSheet option pressed:', label);
+  const handleOptionPress = (onPress: () => void) => {
     onPress();
     onClose();
   };
@@ -53,7 +50,7 @@ export function ActionSheet({ visible, onClose, title, options }: ActionSheetPro
                     <Pressable
                       key={index}
                       style={styles.option}
-                      onPress={() => handleOptionPress(option.onPress, option.label)}>
+                      onPress={() => handleOptionPress(option.onPress)}>
                       <ThemedText
                         style={[
                           styles.optionText,

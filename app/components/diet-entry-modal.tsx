@@ -47,8 +47,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
 
   const isEditMode = !!editEntry;
 
-  console.log('MealEntryModal render - selectedImage:', selectedImage);
-
   const showImagePickerOptions = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -82,116 +80,83 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   }, [editEntry]);
 
   const compressImage = async (uri: string): Promise<string> => {
-    console.log('Compressing image...');
     try {
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: 1000 } }], // Resize to 1000px width, maintains aspect ratio
+        [{ resize: { width: 1000 } }],
         {
-          compress: 0.7, // 70% quality - good balance between size and quality
+          compress: 0.7,
           format: ImageManipulator.SaveFormat.JPEG,
         }
       );
-      console.log('Image compressed successfully. Original:', uri);
-      console.log('Compressed:', manipResult.uri);
       return manipResult.uri;
     } catch (error) {
-      console.error('Error compressing image:', error);
-      // If compression fails, return original
       return uri;
     }
   };
 
   const pickImageFromGallery = async () => {
-    console.log('pickImageFromGallery called');
     setIsPickingImage(true);
     try {
-      const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
-      console.log('Current permission status:', currentPermission.status, 'canAskAgain:', currentPermission.canAskAgain);
-
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log('Permission status after request:', status);
 
       if (status !== 'granted') {
-        console.log('Permission not granted');
         Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
         setIsPickingImage(false);
         return;
       }
     } catch (error) {
-      console.error('Error requesting media library permission:', error);
       Alert.alert('Error', 'Failed to request photo library permission.');
       setIsPickingImage(false);
       return;
     }
 
-    console.log('Launching image picker...');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
       quality: 1,
     });
 
-    console.log('Image picker result:', result);
-
     if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri;
-      console.log('Gallery image selected:', imageUri);
-
-      // Compress the image
-      const compressedUri = await compressImage(imageUri);
-      console.log('Setting selected image to compressed version:', compressedUri);
+      const compressedUri = await compressImage(result.assets[0].uri);
       setSelectedImage(compressedUri);
-      console.log('State update called');
-    } else {
-      console.log('Image selection was cancelled or no assets');
     }
 
     setIsPickingImage(false);
   };
 
   const takePhoto = async () => {
-    console.log('takePhoto called');
     setIsPickingImage(true);
     try {
-      const currentPermission = await ImagePicker.getCameraPermissionsAsync();
-      console.log('Current camera permission:', currentPermission.status, 'canAskAgain:', currentPermission.canAskAgain);
-
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      console.log('Camera permission status after request:', status);
 
       if (status !== 'granted') {
-        console.log('Camera permission not granted');
         Alert.alert('Permission Required', 'Please allow access to your camera to take photos.');
         setIsPickingImage(false);
         return;
       }
     } catch (error) {
-      console.error('Error requesting camera permission:', error);
       Alert.alert('Error', 'Failed to request camera permission.');
       setIsPickingImage(false);
       return;
     }
 
-    console.log('Launching camera...');
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 1,
-    });
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+      });
 
-    console.log('Camera result:', result);
-
-    if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri;
-      console.log('Camera image captured:', imageUri);
-
-      // Compress the image
-      const compressedUri = await compressImage(imageUri);
-      console.log('Setting selected image to compressed version:', compressedUri);
-      setSelectedImage(compressedUri);
-      console.log('State update called');
-    } else {
-      console.log('Camera was cancelled or no assets');
+      if (!result.canceled && result.assets[0]) {
+        const compressedUri = await compressImage(result.assets[0].uri);
+        setSelectedImage(compressedUri);
+      }
+    } catch (error: any) {
+      if (error.message?.includes('simulator')) {
+        Alert.alert('Camera Unavailable', 'Camera is not available on the simulator. Please use "Choose from Gallery" or test on a real device.');
+      } else {
+        Alert.alert('Error', 'Failed to open camera.');
+      }
     }
 
     setIsPickingImage(false);
@@ -218,7 +183,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   };
 
   const resetForm = () => {
-    console.log('resetForm called - clearing all state');
     setSelectedImage(null);
     setDescription('');
     setCalories('');
@@ -228,9 +192,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   };
 
   const handleClose = () => {
-    console.log('handleClose called, isPickingImage:', isPickingImage);
     if (isPickingImage) {
-      console.log('Ignoring close because image picker is active');
       return;
     }
     resetForm();
