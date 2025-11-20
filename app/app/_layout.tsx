@@ -13,6 +13,7 @@ import { WorkoutSessionProvider } from '@/contexts/WorkoutSessionContext';
 import { NetworkProvider, useNetwork } from '@/contexts/network-context';
 import { seedDatabaseIfNeeded } from '@/services/database';
 import { OfflineIndicator } from '@/components/offline-indicator';
+import { registerBackgroundSync } from '@/services/sync/background-sync-task';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -41,6 +42,14 @@ function RootLayoutNav() {
     }
   }, [user, segments, isLoading, router]);
 
+  useEffect(() => {
+    if (user?.hasDrivePermission) {
+      registerBackgroundSync().catch((error) => {
+        console.error('Failed to register background sync:', error);
+      });
+    }
+  }, [user?.hasDrivePermission]);
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       flex: 1,
@@ -57,6 +66,7 @@ function RootLayoutNav() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen
           name="add-goal"
           options={{

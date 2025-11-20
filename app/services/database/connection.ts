@@ -18,6 +18,8 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
       db = await SQLite.openDatabaseAsync(DATABASE_NAME);
 
+      await db.execAsync('PRAGMA foreign_keys = ON;');
+
       // Create all tables
       await db.execAsync(`
         -- Goals/Tasks tables
@@ -133,6 +135,40 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
 
         CREATE INDEX IF NOT EXISTS idx_diet_timestamp ON diet(timestamp DESC);
 
+        -- Sync operations table (outbox pattern)
+        CREATE TABLE IF NOT EXISTS sync_operations (
+          id TEXT PRIMARY KEY NOT NULL,
+          operation_type TEXT NOT NULL,
+          diet_entry_id TEXT NOT NULL,
+          local_image_uri TEXT,
+          gdrive_file_id TEXT,
+          status TEXT DEFAULT 'pending',
+          retry_count INTEGER DEFAULT 0,
+          last_error TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY(diet_entry_id) REFERENCES diet(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sync_ops_status ON sync_operations(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_sync_ops_diet_entry ON sync_operations(diet_entry_id);
+
+        -- Sync settings table
+        CREATE TABLE IF NOT EXISTS sync_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          wifi_only INTEGER DEFAULT 1,
+          last_sync_at INTEGER,
+          total_uploads INTEGER DEFAULT 0,
+          failed_uploads INTEGER DEFAULT 0
+        );
+
+        -- Folder cache table for Google Drive folder IDs
+        CREATE TABLE IF NOT EXISTS folder_cache (
+          key TEXT PRIMARY KEY NOT NULL,
+          folder_id TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        );
+
       `);
 
       // Migration: Add name column to diet table if it doesn't exist
@@ -152,6 +188,51 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         if (!error.message?.includes('duplicate column name')) {
           console.error('Migration error:', error);
         }
+      }
+
+      // Migration: Add sync-related columns to diet table
+      try {
+        await db.execAsync(`
+          ALTER TABLE diet ADD COLUMN sync_status TEXT DEFAULT 'not_synced';
+        `);
+        console.log('Added sync_status column to diet table');
+      } catch (error: any) {
+        if (!error.message?.includes('duplicate column name')) {
+          console.error('Migration error (sync_status):', error);
+        }
+      }
+
+      try {
+        await db.execAsync(`
+          ALTER TABLE diet ADD COLUMN gdrive_file_id TEXT;
+        `);
+        console.log('Added gdrive_file_id column to diet table');
+      } catch (error: any) {
+        if (!error.message?.includes('duplicate column name')) {
+          console.error('Migration error (gdrive_file_id):', error);
+        }
+      }
+
+      try {
+        await db.execAsync(`
+          ALTER TABLE diet ADD COLUMN gdrive_folder_id TEXT;
+        `);
+        console.log('Added gdrive_folder_id column to diet table');
+      } catch (error: any) {
+        if (!error.message?.includes('duplicate column name')) {
+          console.error('Migration error (gdrive_folder_id):', error);
+        }
+      }
+
+      // Initialize sync_settings table with default row if not exists
+      try {
+        await db.execAsync(`
+          INSERT OR IGNORE INTO sync_settings (id, wifi_only, total_uploads, failed_uploads)
+          VALUES (1, 1, 0, 0);
+        `);
+        console.log('Initialized sync_settings table');
+      } catch (error: any) {
+        console.error('Error initializing sync_settings:', error);
       }
 
       console.log('Database initialized successfully');

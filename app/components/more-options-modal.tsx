@@ -19,6 +19,7 @@ interface MoreOptionsModalProps {
 
 const moreOptions: MoreOption[] = [
   { id: 'profile', label: 'Profile', icon: 'person' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
   { id: 'help', label: 'Help', icon: 'help' },
 ];
 
@@ -39,6 +40,9 @@ export default function MoreOptionsModal({ visible, onClose }: MoreOptionsModalP
       switch (optionId) {
         case 'profile':
           router.push('/profile');
+          break;
+        case 'settings':
+          router.push('/settings');
           break;
         case 'help':
           break;

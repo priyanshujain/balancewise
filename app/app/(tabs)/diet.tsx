@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,18 +10,20 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDiet } from '@/hooks/use-diet';
 import { useAuth } from '@/contexts/auth-context';
+import { queueProcessor } from '@/services/sync/queue-processor';
 import type { DietEntry } from '@/services/database/diet';
 
 export default function DietScreen() {
   const [showModal, setShowModal] = useState(false);
   const [showDriveModal, setShowDriveModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DietEntry | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const { dietEntries, loading, addDietEntry, updateDietEntry, removeDietEntry } = useDiet();
-  const { hasDrivePermission } = useAuth();
+  const { dietEntries, loading, addDietEntry, updateDietEntry, removeDietEntry, refreshDietEntries } = useDiet();
+  const { user, token } = useAuth();
 
   const handleSaveEntry = async (entryData: DietEntry) => {
     try {
@@ -60,7 +62,7 @@ export default function DietScreen() {
   };
 
   const handleAddNew = () => {
-    if (!hasDrivePermission) {
+    if (!user?.hasDrivePermission) {
       setShowDriveModal(true);
       return;
     }
@@ -71,6 +73,24 @@ export default function DietScreen() {
   const handleDrivePermissionSuccess = () => {
     setEditingEntry(null);
     setShowModal(true);
+  };
+
+  const handleRefresh = async () => {
+    if (!user?.hasDrivePermission || !token) {
+      await refreshDietEntries();
+      return;
+    }
+
+    try {
+      setRefreshing(true);
+      await queueProcessor.processSyncQueue(token);
+
+      await refreshDietEntries();
+    } catch (error) {
+      console.error('Error during manual sync:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -94,6 +114,14 @@ export default function DietScreen() {
             />
           )}
           contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.tint}
+              colors={[colors.tint]}
+            />
+          }
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center pt-24 px-10">
               <Ionicons name="restaurant-outline" size={64} color={colors.tabIconDefault} />

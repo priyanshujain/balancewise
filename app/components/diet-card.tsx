@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ImageViewerModal } from '@/components/image-viewer-modal';
+import { SyncStatusBadge } from '@/components/sync-status-badge';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
@@ -60,9 +61,12 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
         </Pressable>
 
         <Pressable style={styles.infoContainer} onPress={() => onEdit?.(meal)}>
-          <ThemedText style={[styles.timeText, { color: colors.tabIconDefault }]}>
-            {getTimeAgo(meal.timestamp)}
-          </ThemedText>
+          <View style={styles.timeRow}>
+            <ThemedText style={[styles.timeText, { color: colors.tabIconDefault }]}>
+              {getTimeAgo(meal.timestamp)}
+            </ThemedText>
+            <SyncStatusBadge status={meal.syncStatus} size={16} />
+          </View>
 
           {meal.name && (
             <ThemedText style={styles.name}>
@@ -179,9 +183,14 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     justifyContent: 'space-between',
   },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   timeText: {
     fontSize: 13,
-    marginBottom: 4,
   },
   name: {
     fontSize: 16,

@@ -1,5 +1,6 @@
 import { getDatabase } from './connection';
 import { fileStorage } from '@/services/file-storage';
+import type { DietSyncStatus } from '@/types/sync';
 
 /**
  * Diet entry data structure
@@ -14,6 +15,9 @@ export interface DietEntry {
   carbs: string;
   fat: string;
   timestamp: number;
+  syncStatus?: DietSyncStatus;
+  gdriveFileId?: string | null;
+  gdriveFolderId?: string | null;
 }
 
 /**
@@ -55,6 +59,9 @@ export async function getDietEntries(): Promise<DietEntry[]> {
     carbs: string | null;
     fat: string | null;
     timestamp: number;
+    sync_status: string | null;
+    gdrive_file_id: string | null;
+    gdrive_folder_id: string | null;
   }>('SELECT * FROM diet ORDER BY timestamp DESC');
 
   return rows.map((row) => ({
@@ -67,6 +74,9 @@ export async function getDietEntries(): Promise<DietEntry[]> {
     carbs: row.carbs || '',
     fat: row.fat || '',
     timestamp: row.timestamp,
+    syncStatus: (row.sync_status as DietSyncStatus) || 'not_synced',
+    gdriveFileId: row.gdrive_file_id,
+    gdriveFolderId: row.gdrive_folder_id,
   }));
 }
 
@@ -86,6 +96,9 @@ export async function getDietEntryById(id: string): Promise<DietEntry | null> {
     carbs: string | null;
     fat: string | null;
     timestamp: number;
+    sync_status: string | null;
+    gdrive_file_id: string | null;
+    gdrive_folder_id: string | null;
   }>('SELECT * FROM diet WHERE id = ?', [id]);
 
   if (!row) return null;
@@ -100,6 +113,9 @@ export async function getDietEntryById(id: string): Promise<DietEntry | null> {
     carbs: row.carbs || '',
     fat: row.fat || '',
     timestamp: row.timestamp,
+    syncStatus: (row.sync_status as DietSyncStatus) || 'not_synced',
+    gdriveFileId: row.gdrive_file_id,
+    gdriveFolderId: row.gdrive_folder_id,
   };
 }
 
@@ -147,4 +163,30 @@ export async function deleteDietEntry(id: string): Promise<void> {
 export async function deleteAllDietEntries(): Promise<void> {
   const db = getDatabase();
   await db.runAsync('DELETE FROM diet');
+}
+
+/**
+ * Update sync status for a diet entry
+ */
+export async function updateDietEntrySyncStatus(
+  id: string,
+  syncStatus: DietSyncStatus
+): Promise<void> {
+  const db = getDatabase();
+  await db.runAsync('UPDATE diet SET sync_status = ? WHERE id = ?', [syncStatus, id]);
+}
+
+/**
+ * Update Google Drive file information for a diet entry
+ */
+export async function updateDietEntryGDriveInfo(
+  id: string,
+  fileId: string,
+  folderId: string
+): Promise<void> {
+  const db = getDatabase();
+  await db.runAsync(
+    'UPDATE diet SET gdrive_file_id = ?, gdrive_folder_id = ?, sync_status = ? WHERE id = ?',
+    [fileId, folderId, 'synced', id]
+  );
 }
