@@ -1,4 +1,5 @@
 import { getDatabase } from './connection';
+import { fileStorage } from '@/services/file-storage';
 
 /**
  * Diet entry data structure
@@ -124,6 +125,12 @@ export async function updateDietEntry(entry: DietEntry): Promise<void> {
  */
 export async function deleteDietEntry(id: string): Promise<void> {
   const db = getDatabase();
+
+  const entry = await getDietEntryById(id);
+  if (entry?.imageUri) {
+    await fileStorage.deleteImage(entry.imageUri);
+  }
+
   await db.runAsync('DELETE FROM diet WHERE id = ?', [id]);
 }
 

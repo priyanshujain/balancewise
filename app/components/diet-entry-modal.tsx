@@ -26,6 +26,8 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
 import { apiService } from '@/services/api';
+import { fileStorage } from '@/services/file-storage';
+import { useNetwork } from '@/contexts/network-context';
 
 interface DietEntryModalProps {
   visible: boolean;
@@ -56,6 +58,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { isOnline } = useNetwork();
 
   const isEditMode = !!editEntry;
 
@@ -245,8 +248,9 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       setSelectedImage(compressedUri);
       console.log('State update called');
 
-      // Analyze the image to get nutrition info
-      await analyzeImage(compressedUri);
+      if (isOnline) {
+        await analyzeImage(compressedUri);
+      }
     } else {
       console.log('Image selection was cancelled or no assets');
     }
@@ -288,8 +292,9 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         setSelectedImage(compressedUri);
         console.log('State update called');
 
-        // Analyze the image to get nutrition info
-        await analyzeImage(compressedUri);
+        if (isOnline) {
+          await analyzeImage(compressedUri);
+        }
       } else {
         console.log('Camera was cancelled or no assets');
       }
@@ -304,24 +309,43 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
     setIsPickingImage(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedImage) {
       return;
     }
 
-    const entryData: DietEntry = {
-      id: isEditMode ? editEntry!.id : Date.now().toString(),
-      imageUri: selectedImage,
-      description,
-      calories,
-      protein,
-      carbs,
-      fat,
-      timestamp: isEditMode ? editEntry!.timestamp : Date.now(),
-    };
+    try {
+      const entryId = isEditMode ? editEntry!.id : Date.now().toString();
+      const filename = `${entryId}.jpg`;
 
-    onSave(entryData);
-    resetForm();
+      let permanentUri: string;
+
+      if (isEditMode && selectedImage === editEntry!.imageUri) {
+        permanentUri = selectedImage;
+      } else {
+        if (isEditMode && editEntry!.imageUri) {
+          await fileStorage.deleteImage(editEntry!.imageUri);
+        }
+        permanentUri = await fileStorage.saveImagePermanently(selectedImage, filename);
+      }
+
+      const entryData: DietEntry = {
+        id: entryId,
+        imageUri: permanentUri,
+        description,
+        calories,
+        protein,
+        carbs,
+        fat,
+        timestamp: isEditMode ? editEntry!.timestamp : Date.now(),
+      };
+
+      onSave(entryData);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving image:', error);
+      Alert.alert('Error', 'Failed to save image. Please try again.');
+    }
   };
 
   const resetForm = () => {
@@ -440,6 +464,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                         ref={descriptionInputRef}
                         style={[
                           styles.input,
+                          styles.textArea,
                           {
                             backgroundColor: colors.card,
                             color: colors.text,
@@ -456,6 +481,9 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                           setDescriptionSelection(undefined);
                         }}
                         editable={!isAnalyzing}
+                        multiline={true}
+                        numberOfLines={2}
+                        textAlignVertical="top"
                         selection={descriptionSelection}
                         onSelectionChange={() => {
                           // Allow user to change cursor position after analysis
@@ -803,6 +831,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
     marginBottom: 16,
+  },
+  textArea: {
+    minHeight: 80,
+    maxHeight: 120,
   },
   nutritionGrid: {
     flexDirection: 'row',
