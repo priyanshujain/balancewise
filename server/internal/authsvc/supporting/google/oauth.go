@@ -120,6 +120,32 @@ func (s *OAuthService) GetUserInfo(ctx context.Context, token *oauth2.Token) (*U
 	}, nil
 }
 
+// RefreshToken refreshes an access token using a refresh token
+func (s *OAuthService) RefreshToken(ctx context.Context, refreshToken string) (*oauth2.Token, error) {
+	fullConfig := &oauth2.Config{
+		ClientID:     s.config.ClientID,
+		ClientSecret: s.config.ClientSecret,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+			ScopeDriveFile,
+		},
+		Endpoint: google.Endpoint,
+	}
+
+	token := &oauth2.Token{
+		RefreshToken: refreshToken,
+	}
+
+	tokenSource := fullConfig.TokenSource(ctx, token)
+	freshToken, err := tokenSource.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	return freshToken, nil
+}
+
 // GenerateRandomState generates a random state string for OAuth flow
 func GenerateRandomState(length int) (string, error) {
 	bytes := make([]byte, length)

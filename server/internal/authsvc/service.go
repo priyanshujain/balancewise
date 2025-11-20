@@ -205,6 +205,47 @@ func (s *Service) VerifyToken(ctx context.Context, tokenString string) (*domain.
 	return user, nil
 }
 
+// GetOrRefreshGoogleToken returns a valid Google access token for the user,
+// refreshing it if necessary
+func (s *Service) GetOrRefreshGoogleToken(ctx context.Context, userID uuid.UUID) (accessToken string, expiresAt time.Time, err error) {
+	storedToken, err := s.tokenRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return "", time.Time{}, domain.ErrNotFound
+		}
+		return "", time.Time{}, domain.WrapError("failed to get token", err)
+	}
+
+	if storedToken.RefreshToken == nil || *storedToken.RefreshToken == "" {
+		return "", time.Time{}, domain.ErrUnauthorized
+	}
+
+	needsRefresh := storedToken.AccessToken == nil || *storedToken.AccessToken == "" || time.Now().After(storedToken.ExpiresAt)
+
+	if needsRefresh {
+		freshToken, err := s.oauth.RefreshToken(ctx, *storedToken.RefreshToken)
+		if err != nil {
+			return "", time.Time{}, domain.WrapError("failed to refresh Google token", err)
+		}
+
+		updatedToken := domain.GoogleToken{
+			UserID:       userID,
+			AccessToken:  &freshToken.AccessToken,
+			RefreshToken: &freshToken.RefreshToken,
+			ExpiresAt:    freshToken.Expiry,
+		}
+
+		_, err = s.tokenRepo.SetToken(ctx, updatedToken)
+		if err != nil {
+			return "", time.Time{}, domain.WrapError("failed to update token", err)
+		}
+
+		return freshToken.AccessToken, freshToken.Expiry, nil
+	}
+
+	return *storedToken.AccessToken, storedToken.ExpiresAt, nil
+}
+
 // CleanupExpired removes expired states and tokens
 func (s *Service) CleanupExpired(ctx context.Context) error {
 	if err := s.stateRepo.DeleteExpired(ctx); err != nil {

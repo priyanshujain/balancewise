@@ -49,6 +49,11 @@ type HealthResponse struct {
 	Status string `json:"status"`
 }
 
+type GoogleTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresAt   string `json:"expires_at"`
+}
+
 func NewHandler(svc *authsvc.Service) http.Handler {
 	h := &httpHandler{
 		svc: svc,
@@ -65,6 +70,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/auth/profile", corsMiddleware(h.handleProfile))
 	h.HandleFunc("/auth/request-drive-permission", corsMiddleware(h.handleRequestDrivePermission))
 	h.HandleFunc("/auth/callback-drive", h.handleDriveCallback)
+	h.HandleFunc("/auth/google-token", corsMiddleware(h.handleGetGoogleToken))
 	h.HandleFunc("/health", h.handleHealth)
 }
 
@@ -394,6 +400,45 @@ func (h *httpHandler) handleDriveCallback(w http.ResponseWriter, r *http.Request
 		</body>
 		</html>
 	`)
+}
+
+func (h *httpHandler) handleGetGoogleToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	tokenString, err := jwt.ExtractToken(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ctx := r.Context()
+	user, err := h.svc.VerifyToken(ctx, tokenString)
+	if err != nil {
+		httpErr := httperrors.From(err)
+		http.Error(w, httpErr.Message, httpErr.HttpStatus)
+		return
+	}
+
+	accessToken, expiresAt, err := h.svc.GetOrRefreshGoogleToken(ctx, user.ID)
+	if err != nil {
+		httpErr := httperrors.From(err)
+		w.WriteHeader(httpErr.HttpStatus)
+		json.NewEncoder(w).Encode(httpErr)
+		return
+	}
+
+	response := GoogleTokenResponse{
+		AccessToken: accessToken,
+		ExpiresAt:   expiresAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *httpHandler) handleHealth(w http.ResponseWriter, r *http.Request) {
