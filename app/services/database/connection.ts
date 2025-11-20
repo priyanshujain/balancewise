@@ -122,6 +122,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         CREATE TABLE IF NOT EXISTS diet (
           id TEXT PRIMARY KEY NOT NULL,
           image_uri TEXT NOT NULL,
+          name TEXT,
           description TEXT,
           calories TEXT,
           protein TEXT,
@@ -133,6 +134,25 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_diet_timestamp ON diet(timestamp DESC);
 
       `);
+
+      // Migration: Add name column to diet table if it doesn't exist
+      try {
+        await db.execAsync(`
+          ALTER TABLE diet ADD COLUMN name TEXT;
+        `);
+        console.log('Added name column to diet table');
+
+        // Migrate existing data: copy description to name for entries without name
+        await db.execAsync(`
+          UPDATE diet SET name = description WHERE name IS NULL AND description IS NOT NULL;
+        `);
+        console.log('Migrated existing descriptions to name field');
+      } catch (error: any) {
+        // Column likely already exists, which is fine
+        if (!error.message?.includes('duplicate column name')) {
+          console.error('Migration error:', error);
+        }
+      }
 
       console.log('Database initialized successfully');
       return db;

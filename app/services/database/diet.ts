@@ -7,6 +7,7 @@ import { fileStorage } from '@/services/file-storage';
 export interface DietEntry {
   id: string;
   imageUri: string;
+  name: string;
   description: string;
   calories: string;
   protein: string;
@@ -22,11 +23,12 @@ export async function saveDietEntry(entry: DietEntry): Promise<void> {
   const db = getDatabase();
 
   await db.runAsync(
-    `INSERT INTO diet (id, image_uri, description, calories, protein, carbs, fat, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO diet (id, image_uri, name, description, calories, protein, carbs, fat, timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       entry.id,
       entry.imageUri,
+      entry.name,
       entry.description,
       entry.calories,
       entry.protein,
@@ -46,6 +48,7 @@ export async function getDietEntries(): Promise<DietEntry[]> {
   const rows = await db.getAllAsync<{
     id: string;
     image_uri: string;
+    name: string | null;
     description: string | null;
     calories: string | null;
     protein: string | null;
@@ -57,6 +60,7 @@ export async function getDietEntries(): Promise<DietEntry[]> {
   return rows.map((row) => ({
     id: row.id,
     imageUri: row.image_uri,
+    name: row.name || '',
     description: row.description || '',
     calories: row.calories || '',
     protein: row.protein || '',
@@ -75,6 +79,7 @@ export async function getDietEntryById(id: string): Promise<DietEntry | null> {
   const row = await db.getFirstAsync<{
     id: string;
     image_uri: string;
+    name: string | null;
     description: string | null;
     calories: string | null;
     protein: string | null;
@@ -88,6 +93,7 @@ export async function getDietEntryById(id: string): Promise<DietEntry | null> {
   return {
     id: row.id,
     imageUri: row.image_uri,
+    name: row.name || '',
     description: row.description || '',
     calories: row.calories || '',
     protein: row.protein || '',
@@ -105,10 +111,11 @@ export async function updateDietEntry(entry: DietEntry): Promise<void> {
 
   await db.runAsync(
     `UPDATE diet
-     SET image_uri = ?, description = ?, calories = ?, protein = ?, carbs = ?, fat = ?, timestamp = ?
+     SET image_uri = ?, name = ?, description = ?, calories = ?, protein = ?, carbs = ?, fat = ?, timestamp = ?
      WHERE id = ?`,
     [
       entry.imageUri,
+      entry.name,
       entry.description,
       entry.calories,
       entry.protein,

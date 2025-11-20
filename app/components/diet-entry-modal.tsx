@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Modal,
-  StyleSheet,
   Pressable,
-  TouchableWithoutFeedback,
   View,
+  Text,
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
@@ -14,13 +13,14 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Animated,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { ActionSheet } from '@/components/action-sheet';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -39,6 +39,7 @@ interface DietEntryModalProps {
 
 export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }: DietEntryModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -47,9 +48,9 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [isPickingImage, setIsPickingImage] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [descriptionSelection, setDescriptionSelection] = useState<{start: number, end: number} | undefined>(undefined);
+  const [nameSelection, setNameSelection] = useState<{start: number, end: number} | undefined>(undefined);
 
-  const descriptionInputRef = useRef<any>(null);
+  const nameInputRef = useRef<any>(null);
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim1 = useRef(new Animated.Value(0)).current;
@@ -59,8 +60,24 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { isOnline } = useNetwork();
+  const insets = useSafeAreaInsets();
 
   const isEditMode = !!editEntry;
+
+  const isValidNumber = (value: string): boolean => {
+    if (!value || value.trim() === '') return false;
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= 0;
+  };
+
+  const areAllNutritionFieldsValid = (): boolean => {
+    return (
+      isValidNumber(calories) &&
+      isValidNumber(protein) &&
+      isValidNumber(carbs) &&
+      isValidNumber(fat)
+    );
+  };
 
   const showImagePickerOptions = () => {
     if (Platform.OS === 'ios') {
@@ -166,12 +183,13 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   useEffect(() => {
     if (editEntry) {
       setSelectedImage(editEntry.imageUri);
+      setName(editEntry.name);
       setDescription(editEntry.description);
       setCalories(editEntry.calories);
       setProtein(editEntry.protein);
       setCarbs(editEntry.carbs);
       setFat(editEntry.fat);
-      setDescriptionSelection(undefined); // Don't force cursor position when editing
+      setNameSelection(undefined);
     }
   }, [editEntry]);
 
@@ -200,14 +218,14 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       console.log('Analysis result:', result);
 
       // Update the form fields with the analysis results
-      setDescription(result.food_name);
+      setName(result.food_name);
       setCalories(result.calories.toString());
       setProtein(result.protein.toString());
       setCarbs(result.carbs.toString());
       setFat(result.fat.toString());
 
-      // Set cursor to the beginning of the description field
-      setDescriptionSelection({ start: 0, end: 0 });
+      // Set cursor to the beginning of the name field
+      setNameSelection({ start: 0, end: 0 });
 
     } catch (error) {
       console.error('Error analyzing image:', error);
@@ -310,7 +328,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
   };
 
   const handleSave = async () => {
-    if (!selectedImage) {
+    if (!selectedImage || !areAllNutritionFieldsValid()) {
       return;
     }
 
@@ -332,6 +350,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       const entryData: DietEntry = {
         id: entryId,
         imageUri: permanentUri,
+        name,
         description,
         calories,
         protein,
@@ -350,12 +369,13 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
 
   const resetForm = () => {
     setSelectedImage(null);
+    setName('');
     setDescription('');
     setCalories('');
     setProtein('');
     setCarbs('');
     setFat('');
-    setDescriptionSelection(undefined);
+    setNameSelection(undefined);
   };
 
   const handleClose = () => {
@@ -391,326 +411,333 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
     <>
       <Modal
         visible={visible}
-        transparent
         animationType="slide"
+        presentationStyle="fullScreen"
         onRequestClose={handleClose}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}>
-          <TouchableWithoutFeedback onPress={handleClose}>
-            <View style={styles.overlay}>
-              <TouchableWithoutFeedback>
-                <ThemedView
-                  style={[styles.container, { backgroundColor: colors.background }]}>
-                  <View style={styles.header}>
-                    {isEditMode && (
-                      <Pressable onPress={handleDelete} style={styles.deleteButton}>
-                        <Ionicons
-                          name="trash-outline"
-                          size={24}
-                          color="#FF3B30"
-                        />
-                      </Pressable>
-                    )}
-                    <ThemedText type="subtitle" style={styles.title}>
-                      {isEditMode ? 'Edit Meal' : 'Add Meal'}
-                    </ThemedText>
-                    <Pressable onPress={handleClose} style={styles.closeButton}>
-                      <Ionicons
-                        name="close"
-                        size={24}
-                        color={colors.text}
-                      />
-                    </Pressable>
+        <View className="flex-1" style={{ backgroundColor: colors.background, paddingTop: insets.top }}>
+          <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            className="flex-1">
+            <View className="flex-1">
+              <View className="flex-row items-center justify-center py-4 px-5 border-b border-gray-200 dark:border-gray-700">
+              <Pressable onPress={handleClose} className="absolute left-4 p-1">
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={colors.text}
+                />
+              </Pressable>
+              <ThemedText className="text-lg font-semibold">
+                {isEditMode ? 'Edit Meal' : 'Add Meal'}
+              </ThemedText>
+              {isEditMode && (
+                <Pressable onPress={handleDelete} className="absolute right-4 p-1">
+                  <Ionicons
+                    name="trash-outline"
+                    size={24}
+                    color="#FF3B30"
+                  />
+                </Pressable>
+              )}
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              className="flex-1"
+              contentContainerStyle={{ paddingBottom: 16 }}>
+              {selectedImage ? (
+                <View className="m-4 rounded-2xl overflow-hidden bg-gray-100">
+                  <Image
+                    source={{ uri: selectedImage }}
+                    className="w-full h-52"
+                    resizeMode="contain"
+                  />
+                  <Pressable
+                    className="bg-gray-600 py-3 flex-row items-center justify-center gap-2"
+                    onPress={showImagePickerOptions}
+                    disabled={isAnalyzing}>
+                    <Ionicons name="camera" size={24} color="#fff" />
+                    <Text className="text-white text-base font-semibold">
+                      Change Photo
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  className="h-52 m-4 rounded-2xl border-2 border-dashed items-center justify-center"
+                  style={{ borderColor: colors.tint }}
+                  onPress={showImagePickerOptions}>
+                  <Ionicons name="camera" size={48} color={colors.tint} />
+                  <ThemedText className="mt-3 text-base font-medium" style={{ color: colors.tint }}>
+                    Tap to add photo
+                  </ThemedText>
+                </Pressable>
+              )}
+
+              <View className="px-4">
+                <ThemedText className="text-sm font-semibold mb-2">Name (optional)</ThemedText>
+                <TextInput
+                  ref={nameInputRef}
+                  className="py-3 px-4 rounded-xl border mb-4"
+                  style={{
+                    backgroundColor: colors.card,
+                    color: colors.text,
+                    borderColor: colors.border,
+                    opacity: isAnalyzing ? 0.5 : 1,
+                    fontSize: 16,
+                  }}
+                  placeholder="e.g., Grilled Chicken Salad"
+                  placeholderTextColor={colors.tabIconDefault}
+                  value={name}
+                  onChangeText={(text) => {
+                    setName(text);
+                    setNameSelection(undefined);
+                  }}
+                  editable={!isAnalyzing}
+                  selection={nameSelection}
+                  onSelectionChange={() => {
+                    if (!isAnalyzing) {
+                      setNameSelection(undefined);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (nameSelection) {
+                      setTimeout(() => setNameSelection(undefined), 50);
+                    }
+                  }}
+                />
+
+                <ThemedText className="text-sm font-semibold mb-2">Description (optional)</ThemedText>
+                <TextInput
+                  className="py-3 px-4 rounded-xl border mb-4"
+                  style={{
+                    backgroundColor: colors.card,
+                    color: colors.text,
+                    borderColor: colors.border,
+                    opacity: isAnalyzing ? 0.5 : 1,
+                    fontSize: 16,
+                    minHeight: 80,
+                    maxHeight: 120,
+                  }}
+                  placeholder="e.g., With avocado and vinaigrette dressing"
+                  placeholderTextColor={colors.tabIconDefault}
+                  value={description}
+                  onChangeText={setDescription}
+                  editable={!isAnalyzing}
+                  multiline={true}
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                />
+
+                <View className="flex-row gap-3">
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <ThemedText className="text-sm font-semibold mb-2">Calories</ThemedText>
+                      <ThemedText className="text-sm font-semibold text-red-500 ml-0.5 mb-2">*</ThemedText>
+                    </View>
+                    <TextInput
+                      className="py-3 px-4 rounded-xl border mb-4"
+                      style={{
+                        backgroundColor: colors.card,
+                        color: colors.text,
+                        borderColor: colors.border,
+                        opacity: isAnalyzing ? 0.5 : 1,
+                        fontSize: 16,
+                      }}
+                      placeholder="350"
+                      placeholderTextColor={colors.tabIconDefault}
+                      keyboardType="decimal-pad"
+                      value={calories}
+                      onChangeText={setCalories}
+                      editable={!isAnalyzing}
+                    />
                   </View>
 
-                  <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}>
-                    {selectedImage ? (
-                      <View style={styles.imageContainer}>
-                        <Image
-                          source={{ uri: selectedImage }}
-                          style={styles.selectedImage}
-                          resizeMode="contain"
-                        />
-                        <Pressable
-                          style={[styles.changeImageOverlay, { position: 'relative', marginTop: 10 }]}
-                          onPress={showImagePickerOptions}
-                          disabled={isAnalyzing}>
-                          <Ionicons name="camera" size={24} color="#fff" />
-                          <ThemedText style={styles.changeImageText}>
-                            Change Photo
-                          </ThemedText>
-                        </Pressable>
-                      </View>
-                    ) : (
-                      <Pressable
-                        style={[
-                          styles.imagePlaceholder,
-                          { borderColor: colors.tint },
-                        ]}
-                        onPress={showImagePickerOptions}>
-                        <Ionicons name="camera" size={48} color={colors.tint} />
-                        <ThemedText style={[styles.placeholderText, { color: colors.tint }]}>
-                          Tap to add photo
-                        </ThemedText>
-                      </Pressable>
-                    )}
-
-                    <View style={styles.formContainer}>
-                      <ThemedText style={styles.label}>Description (optional)</ThemedText>
-                      <TextInput
-                        ref={descriptionInputRef}
-                        style={[
-                          styles.input,
-                          styles.textArea,
-                          {
-                            backgroundColor: colors.card,
-                            color: colors.text,
-                            borderColor: colors.border,
-                            opacity: isAnalyzing ? 0.5 : 1,
-                          },
-                        ]}
-                        placeholder="e.g., Oatmeal with berries"
-                        placeholderTextColor={colors.tabIconDefault}
-                        value={description}
-                        onChangeText={(text) => {
-                          setDescription(text);
-                          // Clear selection control once user starts typing
-                          setDescriptionSelection(undefined);
-                        }}
-                        editable={!isAnalyzing}
-                        multiline={true}
-                        numberOfLines={2}
-                        textAlignVertical="top"
-                        selection={descriptionSelection}
-                        onSelectionChange={() => {
-                          // Allow user to change cursor position after analysis
-                          if (!isAnalyzing) {
-                            setDescriptionSelection(undefined);
-                          }
-                        }}
-                        onFocus={() => {
-                          // Clear selection control when user focuses the field
-                          if (descriptionSelection) {
-                            setTimeout(() => setDescriptionSelection(undefined), 50);
-                          }
-                        }}
-                      />
-
-                      <View style={styles.nutritionGrid}>
-                        <View style={styles.nutritionItem}>
-                          <ThemedText style={styles.label}>Calories</ThemedText>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                backgroundColor: colors.card,
-                                color: colors.text,
-                                borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
-                              },
-                            ]}
-                            placeholder="350"
-                            placeholderTextColor={colors.tabIconDefault}
-                            keyboardType="numeric"
-                            value={calories}
-                            onChangeText={setCalories}
-                            editable={!isAnalyzing}
-                          />
-                        </View>
-
-                        <View style={styles.nutritionItem}>
-                          <ThemedText style={styles.label}>Protein (g)</ThemedText>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                backgroundColor: colors.card,
-                                color: colors.text,
-                                borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
-                              },
-                            ]}
-                            placeholder="8"
-                            placeholderTextColor={colors.tabIconDefault}
-                            keyboardType="numeric"
-                            value={protein}
-                            onChangeText={setProtein}
-                            editable={!isAnalyzing}
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.nutritionGrid}>
-                        <View style={styles.nutritionItem}>
-                          <ThemedText style={styles.label}>Carbs (g)</ThemedText>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                backgroundColor: colors.card,
-                                color: colors.text,
-                                borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
-                              },
-                            ]}
-                            placeholder="50"
-                            placeholderTextColor={colors.tabIconDefault}
-                            keyboardType="numeric"
-                            value={carbs}
-                            onChangeText={setCarbs}
-                            editable={!isAnalyzing}
-                          />
-                        </View>
-
-                        <View style={styles.nutritionItem}>
-                          <ThemedText style={styles.label}>Fat (g)</ThemedText>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                backgroundColor: colors.card,
-                                color: colors.text,
-                                borderColor: colors.border,
-                                opacity: isAnalyzing ? 0.5 : 1,
-                              },
-                            ]}
-                            placeholder="14"
-                            placeholderTextColor={colors.tabIconDefault}
-                            keyboardType="numeric"
-                            value={fat}
-                            onChangeText={setFat}
-                            editable={!isAnalyzing}
-                          />
-                        </View>
-                      </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <ThemedText className="text-sm font-semibold mb-2">Protein (g)</ThemedText>
+                      <ThemedText className="text-sm font-semibold text-red-500 ml-0.5 mb-2">*</ThemedText>
                     </View>
-                  </ScrollView>
+                    <TextInput
+                      className="py-3 px-4 rounded-xl border mb-4"
+                      style={{
+                        backgroundColor: colors.card,
+                        color: colors.text,
+                        borderColor: colors.border,
+                        opacity: isAnalyzing ? 0.5 : 1,
+                        fontSize: 16,
+                      }}
+                      placeholder="8"
+                      placeholderTextColor={colors.tabIconDefault}
+                      keyboardType="decimal-pad"
+                      value={protein}
+                      onChangeText={setProtein}
+                      editable={!isAnalyzing}
+                    />
+                  </View>
+                </View>
 
-                  <Pressable
-                    style={[
-                      styles.saveButton,
-                      {
-                        backgroundColor: (selectedImage && !isAnalyzing) ? colors.tint : colors.tabIconDefault,
-                      },
-                    ]}
-                    onPress={handleSave}
-                    disabled={!selectedImage || isAnalyzing}>
-                    <ThemedText style={styles.saveButtonText}>
-                      {isEditMode ? 'Update Meal' : 'Save Meal'}
-                    </ThemedText>
-                  </Pressable>
-                </ThemedView>
-              </TouchableWithoutFeedback>
+                <View className="flex-row gap-3">
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <ThemedText className="text-sm font-semibold mb-2">Carbs (g)</ThemedText>
+                      <ThemedText className="text-sm font-semibold text-red-500 ml-0.5 mb-2">*</ThemedText>
+                    </View>
+                    <TextInput
+                      className="py-3 px-4 rounded-xl border mb-4"
+                      style={{
+                        backgroundColor: colors.card,
+                        color: colors.text,
+                        borderColor: colors.border,
+                        opacity: isAnalyzing ? 0.5 : 1,
+                        fontSize: 16,
+                      }}
+                      placeholder="50"
+                      placeholderTextColor={colors.tabIconDefault}
+                      keyboardType="decimal-pad"
+                      value={carbs}
+                      onChangeText={setCarbs}
+                      editable={!isAnalyzing}
+                    />
+                  </View>
+
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <ThemedText className="text-sm font-semibold mb-2">Fat (g)</ThemedText>
+                      <ThemedText className="text-sm font-semibold text-red-500 ml-0.5 mb-2">*</ThemedText>
+                    </View>
+                    <TextInput
+                      className="py-3 px-4 rounded-xl border mb-4"
+                      style={{
+                        backgroundColor: colors.card,
+                        color: colors.text,
+                        borderColor: colors.border,
+                        opacity: isAnalyzing ? 0.5 : 1,
+                        fontSize: 16,
+                      }}
+                      placeholder="14"
+                      placeholderTextColor={colors.tabIconDefault}
+                      keyboardType="decimal-pad"
+                      value={fat}
+                      onChangeText={setFat}
+                      editable={!isAnalyzing}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View className="px-4 pb-6">
+              <Pressable
+                onPress={handleSave}
+                className="rounded-lg py-4 items-center"
+                style={{
+                  backgroundColor: colors.tint,
+                  opacity: (!selectedImage || isAnalyzing || !areAllNutritionFieldsValid()) ? 0.5 : 1,
+                }}
+                disabled={!selectedImage || isAnalyzing || !areAllNutritionFieldsValid()}>
+                <Text className="text-white text-lg font-semibold">
+                  {isEditMode ? 'Update Meal' : 'Save Meal'}
+                </Text>
+              </Pressable>
             </View>
-          </TouchableWithoutFeedback>
+            </View>
+          </KeyboardAvoidingView>
 
           {/* Full Screen Animated Loader */}
           {isAnalyzing && (
             <Animated.View
-              style={[
-                styles.fullScreenLoader,
-                {
-                  opacity: fadeAnim,
-                }
-              ]}
+              className="absolute inset-0 bg-black/85 justify-center items-center z-50"
+              style={{ opacity: fadeAnim }}
               pointerEvents="auto">
-              <View style={styles.loaderContent}>
+              <View className="w-full h-full justify-center items-center relative">
                 {/* Floating Food Icons */}
                 <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      top: '20%',
-                      left: '15%',
-                      transform: [
-                        {
-                          translateY: floatAnim1.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -20],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🍎</ThemedText>
+                  className="absolute"
+                  style={{
+                    top: '20%',
+                    left: '15%',
+                    transform: [
+                      {
+                        translateY: floatAnim1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -20],
+                        }),
+                      },
+                    ],
+                  }}>
+                  <ThemedText className="text-5xl opacity-60">🍎</ThemedText>
                 </Animated.View>
 
                 <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      top: '25%',
-                      right: '20%',
-                      transform: [
-                        {
-                          translateY: floatAnim2.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -25],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🥗</ThemedText>
+                  className="absolute"
+                  style={{
+                    top: '25%',
+                    right: '20%',
+                    transform: [
+                      {
+                        translateY: floatAnim2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -25],
+                        }),
+                      },
+                    ],
+                  }}>
+                  <ThemedText className="text-5xl opacity-60">🥗</ThemedText>
                 </Animated.View>
 
                 <Animated.View
-                  style={[
-                    styles.floatingIcon,
-                    {
-                      bottom: '30%',
-                      left: '20%',
-                      transform: [
-                        {
-                          translateY: floatAnim3.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -15],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <ThemedText style={styles.foodIcon}>🥑</ThemedText>
+                  className="absolute"
+                  style={{
+                    bottom: '30%',
+                    left: '20%',
+                    transform: [
+                      {
+                        translateY: floatAnim3.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -15],
+                        }),
+                      },
+                    ],
+                  }}>
+                  <ThemedText className="text-5xl opacity-60">🥑</ThemedText>
                 </Animated.View>
 
                 {/* Center Animated Circle */}
                 <Animated.View
-                  style={[
-                    styles.pulseCircle,
-                    {
-                      transform: [
-                        {
-                          scale: pulseAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [1, 1.2],
-                          }),
-                        },
-                      ],
-                      opacity: pulseAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 0.1],
-                      }),
-                    },
-                  ]}
+                  className="absolute w-64 h-64 rounded-full bg-blue-500"
+                  style={{
+                    transform: [
+                      {
+                        scale: pulseAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.2],
+                        }),
+                      },
+                    ],
+                    opacity: pulseAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 0.1],
+                    }),
+                  }}
                 />
 
                 {/* Main Content */}
-                <View style={styles.loaderCard}>
+                <View className="bg-white rounded-3xl p-8 items-center shadow-2xl z-10">
                   <ActivityIndicator size="large" color="#007AFF" />
-                  <ThemedText style={styles.loaderTitle}>
+                  <ThemedText className="text-xl font-bold mt-5 text-black">
                     Analyzing your food
                   </ThemedText>
-                  <ThemedText style={styles.loaderSubtitle}>
+                  <ThemedText className="text-sm mt-2 text-gray-600">
                     Detecting nutrition information...
                   </ThemedText>
                 </View>
               </View>
             </Animated.View>
           )}
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <ActionSheet
@@ -731,186 +758,3 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    maxHeight: '90%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 16,
-    padding: 4,
-  },
-  deleteButton: {
-    position: 'absolute',
-    left: 16,
-    padding: 4,
-  },
-  scrollContent: {
-    paddingBottom: 16,
-  },
-  imagePlaceholder: {
-    height: 200,
-    margin: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  imageContainer: {
-    margin: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-  },
-  selectedImage: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#e0e0e0',
-  },
-  changeImageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  changeImageText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  formContainer: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  textArea: {
-    minHeight: 80,
-    maxHeight: 120,
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  nutritionItem: {
-    flex: 1,
-  },
-  saveButton: {
-    margin: 16,
-    marginTop: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  fullScreenLoader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
-  },
-  loaderContent: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  floatingIcon: {
-    position: 'absolute',
-  },
-  foodIcon: {
-    fontSize: 48,
-    opacity: 0.6,
-  },
-  pulseCircle: {
-    position: 'absolute',
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: '#007AFF',
-  },
-  loaderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-    zIndex: 1,
-  },
-  loaderTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 20,
-    color: '#000',
-  },
-  loaderSubtitle: {
-    fontSize: 14,
-    marginTop: 8,
-    color: '#666',
-  },
-});

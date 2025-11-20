@@ -64,9 +64,9 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
             {getTimeAgo(meal.timestamp)}
           </ThemedText>
 
-          {meal.description && (
-            <ThemedText style={styles.description}>
-              {meal.description}
+          {meal.name && (
+            <ThemedText style={styles.name}>
+              {meal.name}
             </ThemedText>
           )}
 
@@ -127,6 +127,12 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
               </View>
             </View>
           </View>
+
+          {meal.description && (
+            <ThemedText style={[styles.description, { color: colors.tabIconDefault }]}>
+              {meal.description}
+            </ThemedText>
+          )}
         </Pressable>
       </View>
 
@@ -177,10 +183,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 4,
   },
-  description: {
+  name: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  description: {
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 16,
   },
   nutritionContainer: {
     gap: 8,
