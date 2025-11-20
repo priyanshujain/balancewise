@@ -14,7 +14,7 @@ import (
 )
 
 const deleteAuthTokenByUserID = `-- name: DeleteAuthTokenByUserID :exec
-DELETE FROM auth_tokens
+DELETE FROM google_tokens
 WHERE user_id = $1
 `
 
@@ -24,7 +24,7 @@ func (q *Queries) DeleteAuthTokenByUserID(ctx context.Context, userID uuid.UUID)
 }
 
 const deleteExpiredAuthTokens = `-- name: DeleteExpiredAuthTokens :exec
-DELETE FROM auth_tokens
+DELETE FROM google_tokens
 WHERE expires_at < NOW()
 `
 
@@ -34,15 +34,16 @@ func (q *Queries) DeleteExpiredAuthTokens(ctx context.Context) error {
 }
 
 const getAuthTokenByUserID = `-- name: GetAuthTokenByUserID :one
-SELECT user_id, refresh_token, expires_at, created_at FROM auth_tokens
+SELECT user_id, access_token, refresh_token, expires_at, created_at FROM google_tokens
 WHERE user_id = $1
 `
 
-func (q *Queries) GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (AuthToken, error) {
+func (q *Queries) GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (GoogleToken, error) {
 	row := q.queryRow(ctx, q.getAuthTokenByUserIDStmt, getAuthTokenByUserID, userID)
-	var i AuthToken
+	var i GoogleToken
 	err := row.Scan(
 		&i.UserID,
+		&i.AccessToken,
 		&i.RefreshToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,
@@ -51,7 +52,7 @@ func (q *Queries) GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (A
 }
 
 const updateAuthTokenRefreshToken = `-- name: UpdateAuthTokenRefreshToken :exec
-UPDATE auth_tokens
+UPDATE google_tokens
 SET refresh_token = $2
 WHERE user_id = $1
 `
@@ -67,29 +68,38 @@ func (q *Queries) UpdateAuthTokenRefreshToken(ctx context.Context, arg UpdateAut
 }
 
 const upsertAuthToken = `-- name: UpsertAuthToken :one
-INSERT INTO auth_tokens (
+INSERT INTO google_tokens (
     user_id,
+    access_token,
     refresh_token,
     expires_at
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 ) ON CONFLICT (user_id) DO UPDATE SET
-    refresh_token = COALESCE(NULLIF($2, ''), auth_tokens.refresh_token),
-    expires_at = $3
-RETURNING user_id, refresh_token, expires_at, created_at
+    access_token = COALESCE(NULLIF($2, ''), google_tokens.access_token),
+    refresh_token = COALESCE(NULLIF($3, ''), google_tokens.refresh_token),
+    expires_at = $4
+RETURNING user_id, access_token, refresh_token, expires_at, created_at
 `
 
 type UpsertAuthTokenParams struct {
 	UserID       uuid.UUID      `json:"user_id"`
+	AccessToken  sql.NullString `json:"access_token"`
 	RefreshToken sql.NullString `json:"refresh_token"`
 	ExpiresAt    time.Time      `json:"expires_at"`
 }
 
-func (q *Queries) UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (AuthToken, error) {
-	row := q.queryRow(ctx, q.upsertAuthTokenStmt, upsertAuthToken, arg.UserID, arg.RefreshToken, arg.ExpiresAt)
-	var i AuthToken
+func (q *Queries) UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (GoogleToken, error) {
+	row := q.queryRow(ctx, q.upsertAuthTokenStmt, upsertAuthToken,
+		arg.UserID,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.ExpiresAt,
+	)
+	var i GoogleToken
 	err := row.Scan(
 		&i.UserID,
+		&i.AccessToken,
 		&i.RefreshToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,

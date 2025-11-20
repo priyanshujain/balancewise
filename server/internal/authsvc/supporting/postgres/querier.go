@@ -18,7 +18,7 @@ type Querier interface {
 	DeleteExpiredAuthStates(ctx context.Context) error
 	DeleteExpiredAuthTokens(ctx context.Context) error
 	GetAuthState(ctx context.Context, state string) (AuthState, error)
-	GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (AuthToken, error)
+	GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (GoogleToken, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	UpdateAuthState(ctx context.Context, arg UpdateAuthStateParams) (AuthState, error)
@@ -26,7 +26,7 @@ type Querier interface {
 	UpdateGDriveAllowed(ctx context.Context, arg UpdateGDriveAllowedParams) (User, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserByEmail(ctx context.Context, arg UpdateUserByEmailParams) (User, error)
-	UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (AuthToken, error)
+	UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (GoogleToken, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -20,8 +20,9 @@ type AuthState struct {
 	CreatedAt     time.Time      `json:"created_at"`
 }
 
-type AuthToken struct {
+type GoogleToken struct {
 	UserID       uuid.UUID      `json:"user_id"`
+	AccessToken  sql.NullString `json:"access_token"`
 	RefreshToken sql.NullString `json:"refresh_token"`
 	ExpiresAt    time.Time      `json:"expires_at"`
 	CreatedAt    time.Time      `json:"created_at"`

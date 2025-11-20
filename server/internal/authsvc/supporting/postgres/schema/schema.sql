@@ -24,12 +24,13 @@ CREATE TABLE IF NOT EXISTS auth_state (
 CREATE INDEX IF NOT EXISTS idx_auth_state_expires_at ON auth_state(expires_at);
 CREATE INDEX IF NOT EXISTS idx_auth_state_authenticated ON auth_state(authenticated);
 
--- Auth tokens table (refresh tokens only, one per user)
-CREATE TABLE IF NOT EXISTS auth_tokens (
+-- Google OAuth tokens table (stores Google access and refresh tokens, one per user)
+CREATE TABLE IF NOT EXISTS google_tokens (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    access_token TEXT,
     refresh_token TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_google_tokens_expires_at ON google_tokens(expires_at);

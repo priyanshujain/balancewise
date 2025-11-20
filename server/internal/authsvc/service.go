@@ -19,7 +19,7 @@ import (
 type Service struct {
 	userRepo  domain.UserRepository
 	stateRepo domain.StateRepository
-	tokenRepo domain.TokenRepository
+	tokenRepo domain.GoogleTokenRepository
 	oauth     *google.OAuthService
 	jwtSvc    *jwt.Service
 }
@@ -27,7 +27,7 @@ type Service struct {
 type ServiceConfig struct {
 	UserRepository  domain.UserRepository
 	StateRepository domain.StateRepository
-	TokenRepository domain.TokenRepository
+	TokenRepository domain.GoogleTokenRepository
 	OAuthService    *google.OAuthService
 	JWTService      *jwt.Service
 }
@@ -121,13 +121,14 @@ func (s *Service) HandleCallback(ctx context.Context, state, code string) (*doma
 		slog.Info("updated existing user", "email", user.Email)
 	}
 
-	// Store refresh token in database
-	authToken := domain.AuthToken{
+	// Store Google OAuth tokens in database
+	googleToken := domain.GoogleToken{
 		UserID:       user.ID,
+		AccessToken:  &token.AccessToken,
 		RefreshToken: &token.RefreshToken,
-		ExpiresAt:    time.Now().Add(30 * 24 * time.Hour), // 30 days
+		ExpiresAt:    token.Expiry,
 	}
-	_, err = s.tokenRepo.Upsert(ctx, authToken)
+	_, err = s.tokenRepo.SetToken(ctx, googleToken)
 	if err != nil {
 		return nil, "", domain.WrapError("failed to store token", err)
 	}
@@ -268,12 +269,13 @@ func (s *Service) HandleDriveCallback(ctx context.Context, state, code string) (
 		return nil, domain.WrapError("failed to get user", err)
 	}
 
-	authToken := domain.AuthToken{
+	googleToken := domain.GoogleToken{
 		UserID:       user.ID,
+		AccessToken:  &token.AccessToken,
 		RefreshToken: &token.RefreshToken,
-		ExpiresAt:    time.Now().Add(30 * 24 * time.Hour),
+		ExpiresAt:    token.Expiry,
 	}
-	_, err = s.tokenRepo.Upsert(ctx, authToken)
+	_, err = s.tokenRepo.SetToken(ctx, googleToken)
 	if err != nil {
 		return nil, domain.WrapError("failed to store token", err)
 	}

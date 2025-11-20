@@ -13,13 +13,18 @@ type tokenRepository struct {
 	queries *Queries
 }
 
-func NewTokenRepository(db *sql.DB) domain.TokenRepository {
+func NewTokenRepository(db *sql.DB) domain.GoogleTokenRepository {
 	return &tokenRepository{
 		queries: New(db),
 	}
 }
 
-func (r *tokenRepository) Upsert(ctx context.Context, token domain.AuthToken) (*domain.AuthToken, error) {
+func (r *tokenRepository) SetToken(ctx context.Context, token domain.GoogleToken) (*domain.GoogleToken, error) {
+	var accessToken sql.NullString
+	if token.AccessToken != nil && *token.AccessToken != "" {
+		accessToken = sql.NullString{String: *token.AccessToken, Valid: true}
+	}
+
 	var refreshToken sql.NullString
 	if token.RefreshToken != nil && *token.RefreshToken != "" {
 		refreshToken = sql.NullString{String: *token.RefreshToken, Valid: true}
@@ -27,6 +32,7 @@ func (r *tokenRepository) Upsert(ctx context.Context, token domain.AuthToken) (*
 
 	dbToken, err := r.queries.UpsertAuthToken(ctx, UpsertAuthTokenParams{
 		UserID:       token.UserID,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    token.ExpiresAt,
 	})
@@ -34,10 +40,10 @@ func (r *tokenRepository) Upsert(ctx context.Context, token domain.AuthToken) (*
 		return nil, err
 	}
 
-	return toDomainAuthToken(dbToken), nil
+	return toDomainGoogleToken(dbToken), nil
 }
 
-func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.AuthToken, error) {
+func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.GoogleToken, error) {
 	dbToken, err := r.queries.GetAuthTokenByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -46,7 +52,7 @@ func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*d
 		return nil, err
 	}
 
-	return toDomainAuthToken(dbToken), nil
+	return toDomainGoogleToken(dbToken), nil
 }
 
 func (r *tokenRepository) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error {
@@ -64,11 +70,15 @@ func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
 	return r.queries.DeleteExpiredAuthTokens(ctx)
 }
 
-func toDomainAuthToken(dbToken AuthToken) *domain.AuthToken {
-	token := &domain.AuthToken{
+func toDomainGoogleToken(dbToken GoogleToken) *domain.GoogleToken {
+	token := &domain.GoogleToken{
 		UserID:    dbToken.UserID,
 		ExpiresAt: dbToken.ExpiresAt,
 		CreatedAt: dbToken.CreatedAt,
+	}
+
+	if dbToken.AccessToken.Valid {
+		token.AccessToken = &dbToken.AccessToken.String
 	}
 
 	if dbToken.RefreshToken.Valid {
