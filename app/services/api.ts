@@ -93,7 +93,6 @@ class ApiService {
     });
   }
 
-<<<<<<< HEAD
   async requestDrivePermission(token: string): Promise<InitiateAuthResponse> {
     return this.request<InitiateAuthResponse>('/auth/request-drive-permission', {
       method: 'POST',
@@ -110,7 +109,8 @@ class ApiService {
         Authorization: `Bearer ${token}`,
       },
     });
-=======
+  }
+
   async analyzeDietImage(imageUri: string): Promise<AnalyzeResponse> {
     const url = `${this.baseUrl}/diet/analyze`;
 
@@ -203,7 +203,6 @@ class ApiService {
       console.error('Diet image analysis failed:', error);
       throw error;
     }
->>>>>>> master
   }
 }
 

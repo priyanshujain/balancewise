@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,11 +18,7 @@ export default function SessionDetailsScreen() {
   const [sets, setSets] = useState<SessionSet[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSessionDetails();
-  }, [params.sessionId]);
-
-  const loadSessionDetails = async () => {
+  const loadSessionDetails = useCallback(async () => {
     if (!params.sessionId) {
       router.back();
       return;
@@ -46,7 +42,11 @@ export default function SessionDetailsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.sessionId, router]);
+
+  useEffect(() => {
+    loadSessionDetails();
+  }, [loadSessionDetails]);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '0s';

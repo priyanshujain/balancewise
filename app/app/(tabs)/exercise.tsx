@@ -41,7 +41,7 @@ export default function ExerciseScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workoutsLoaded]);
 
   const loadHistory = useCallback(async (force = false) => {
     if (historyLoaded && !force) return;
@@ -55,7 +55,7 @@ export default function ExerciseScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [historyLoaded]);
 
   useFocusEffect(
     useCallback(() => {

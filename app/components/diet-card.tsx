@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, Image, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,21 +19,6 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Meal',
-      'Are you sure you want to delete this meal?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDelete?.(meal.id)
-        },
-      ]
-    );
-  };
 
   const getTimeAgo = (timestamp: number) => {
     const now = Date.now();

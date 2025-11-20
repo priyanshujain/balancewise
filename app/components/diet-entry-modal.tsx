@@ -59,7 +59,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
 
   const isEditMode = !!editEntry;
 
-<<<<<<< HEAD
   const showImagePickerOptions = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -79,7 +78,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       setShowImagePicker(true);
     }
   };
-=======
+
   // Animate loader when analyzing
   useEffect(() => {
     if (isAnalyzing) {
@@ -155,10 +154,10 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         useNativeDriver: true,
       }).start();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnalyzing]);
 
   console.log('MealEntryModal render - selectedImage:', selectedImage);
->>>>>>> master
 
   // Populate form when editing
   useEffect(() => {
@@ -184,7 +183,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         }
       );
       return manipResult.uri;
-    } catch (error) {
+    } catch {
       return uri;
     }
   };
@@ -207,11 +206,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       // Set cursor to the beginning of the description field
       setDescriptionSelection({ start: 0, end: 0 });
 
-      // Alert.alert(
-      //   'Analysis Complete',
-      //   `Detected: ${result.food_name}\n\nNutrition information has been filled in automatically. You can edit if needed.`,
-      //   [{ text: 'OK' }]
-      // );
     } catch (error) {
       console.error('Error analyzing image:', error);
       Alert.alert(
@@ -234,7 +228,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         setIsPickingImage(false);
         return;
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to request photo library permission.');
       setIsPickingImage(false);
       return;
@@ -249,15 +243,12 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
     if (!result.canceled && result.assets[0]) {
       const compressedUri = await compressImage(result.assets[0].uri);
       setSelectedImage(compressedUri);
-<<<<<<< HEAD
-=======
       console.log('State update called');
 
       // Analyze the image to get nutrition info
       await analyzeImage(compressedUri);
     } else {
       console.log('Image selection was cancelled or no assets');
->>>>>>> master
     }
 
     setIsPickingImage(false);
@@ -273,7 +264,7 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         setIsPickingImage(false);
         return;
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to request camera permission.');
       setIsPickingImage(false);
       return;
@@ -285,10 +276,22 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
         quality: 1,
       });
 
-<<<<<<< HEAD
+      console.log('Camera result:', result);
+
       if (!result.canceled && result.assets[0]) {
-        const compressedUri = await compressImage(result.assets[0].uri);
+        const imageUri = result.assets[0].uri;
+        console.log('Camera image captured:', imageUri);
+
+        // Compress the image
+        const compressedUri = await compressImage(imageUri);
+        console.log('Setting selected image to compressed version:', compressedUri);
         setSelectedImage(compressedUri);
+        console.log('State update called');
+
+        // Analyze the image to get nutrition info
+        await analyzeImage(compressedUri);
+      } else {
+        console.log('Camera was cancelled or no assets');
       }
     } catch (error: any) {
       if (error.message?.includes('simulator')) {
@@ -296,24 +299,6 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
       } else {
         Alert.alert('Error', 'Failed to open camera.');
       }
-=======
-    console.log('Camera result:', result);
-
-    if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri;
-      console.log('Camera image captured:', imageUri);
-
-      // Compress the image
-      const compressedUri = await compressImage(imageUri);
-      console.log('Setting selected image to compressed version:', compressedUri);
-      setSelectedImage(compressedUri);
-      console.log('State update called');
-
-      // Analyze the image to get nutrition info
-      await analyzeImage(compressedUri);
-    } else {
-      console.log('Camera was cancelled or no assets');
->>>>>>> master
     }
 
     setIsPickingImage(false);
@@ -427,12 +412,8 @@ export function DietEntryModal({ visible, onClose, onSave, onDelete, editEntry }
                         />
                         <Pressable
                           style={[styles.changeImageOverlay, { position: 'relative', marginTop: 10 }]}
-<<<<<<< HEAD
-                          onPress={showImagePickerOptions}>
-=======
-                          onPress={() => setShowImagePicker(true)}
+                          onPress={showImagePickerOptions}
                           disabled={isAnalyzing}>
->>>>>>> master
                           <Ionicons name="camera" size={24} color="#fff" />
                           <ThemedText style={styles.changeImageText}>
                             Change Photo
