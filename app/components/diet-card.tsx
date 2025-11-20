@@ -80,7 +80,7 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
           </ThemedText>
 
           {meal.description && (
-            <ThemedText style={styles.description} numberOfLines={2}>
+            <ThemedText style={styles.description}>
               {meal.description}
             </ThemedText>
           )}
