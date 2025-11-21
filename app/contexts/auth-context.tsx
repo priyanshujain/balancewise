@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { initDatabase, getAuth, saveAuth, deleteAuth, User } from '@/services/database';
+import { initDatabase, getAuth, saveAuth, deleteAuth, updateDrivePermission, User } from '@/services/database';
 
 interface AuthContextType {
   user: User | null;
@@ -7,6 +7,8 @@ interface AuthContextType {
   signIn: (token: string, userData: User) => Promise<void>;
   signOut: () => Promise<void>;
   token: string | null;
+  hasDrivePermission: boolean;
+  setDrivePermission: (hasPermission: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,10 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Delete from database
       await deleteAuth();
 
-      // Clear state
       setToken(null);
       setUser(null);
 
@@ -83,8 +83,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setDrivePermission = async (hasPermission: boolean) => {
+    try {
+      await updateDrivePermission(hasPermission);
+
+      if (user) {
+        setUser({ ...user, hasDrivePermission: hasPermission });
+      }
+
+      console.log('Drive permission updated:', hasPermission);
+    } catch (error) {
+      console.error('Failed to update Drive permission:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, token }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      signIn,
+      signOut,
+      token,
+      hasDrivePermission: user?.hasDrivePermission ?? false,
+      setDrivePermission
+    }}>
       {children}
     </AuthContext.Provider>
   );

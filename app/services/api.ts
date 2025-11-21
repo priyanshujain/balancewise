@@ -17,7 +17,16 @@ export interface PollAuthResponse {
     email: string;
     name: string;
     picture?: string;
+    gdrive_allowed?: boolean;
   };
+}
+
+export interface ProfileResponse {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  gdrive_allowed: boolean;
 }
 
 export interface AnalyzeResponse {
@@ -77,6 +86,24 @@ class ApiService {
 
   async verifyToken(token: string): Promise<{ valid: boolean; user?: any }> {
     return this.request('/auth/verify', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  async requestDrivePermission(token: string): Promise<InitiateAuthResponse> {
+    return this.request<InitiateAuthResponse>('/auth/request-drive-permission', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  async getProfile(token: string): Promise<ProfileResponse> {
+    return this.request<ProfileResponse>('/auth/profile', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

@@ -13,65 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
-const createAuthToken = `-- name: CreateAuthToken :one
-INSERT INTO auth_tokens (
-    user_id,
-    jwt_token,
-    refresh_token,
-    expires_at
-) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, user_id, jwt_token, refresh_token, expires_at, created_at
+const deleteAuthTokenByUserID = `-- name: DeleteAuthTokenByUserID :exec
+DELETE FROM google_tokens
+WHERE user_id = $1
 `
 
-type CreateAuthTokenParams struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	JwtToken     string         `json:"jwt_token"`
-	RefreshToken sql.NullString `json:"refresh_token"`
-	ExpiresAt    time.Time      `json:"expires_at"`
-}
-
-func (q *Queries) CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) (AuthToken, error) {
-	row := q.queryRow(ctx, q.createAuthTokenStmt, createAuthToken,
-		arg.UserID,
-		arg.JwtToken,
-		arg.RefreshToken,
-		arg.ExpiresAt,
-	)
-	var i AuthToken
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.JwtToken,
-		&i.RefreshToken,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const deleteAuthToken = `-- name: DeleteAuthToken :exec
-DELETE FROM auth_tokens
-WHERE id = $1
-`
-
-func (q *Queries) DeleteAuthToken(ctx context.Context, id uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteAuthTokenStmt, deleteAuthToken, id)
-	return err
-}
-
-const deleteAuthTokenByJWT = `-- name: DeleteAuthTokenByJWT :exec
-DELETE FROM auth_tokens
-WHERE jwt_token = $1
-`
-
-func (q *Queries) DeleteAuthTokenByJWT(ctx context.Context, jwtToken string) error {
-	_, err := q.exec(ctx, q.deleteAuthTokenByJWTStmt, deleteAuthTokenByJWT, jwtToken)
+func (q *Queries) DeleteAuthTokenByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAuthTokenByUserIDStmt, deleteAuthTokenByUserID, userID)
 	return err
 }
 
 const deleteExpiredAuthTokens = `-- name: DeleteExpiredAuthTokens :exec
-DELETE FROM auth_tokens
+DELETE FROM google_tokens
 WHERE expires_at < NOW()
 `
 
@@ -80,18 +33,17 @@ func (q *Queries) DeleteExpiredAuthTokens(ctx context.Context) error {
 	return err
 }
 
-const getAuthTokenByJWT = `-- name: GetAuthTokenByJWT :one
-SELECT id, user_id, jwt_token, refresh_token, expires_at, created_at FROM auth_tokens
-WHERE jwt_token = $1
+const getAuthTokenByUserID = `-- name: GetAuthTokenByUserID :one
+SELECT user_id, access_token, refresh_token, expires_at, created_at FROM google_tokens
+WHERE user_id = $1
 `
 
-func (q *Queries) GetAuthTokenByJWT(ctx context.Context, jwtToken string) (AuthToken, error) {
-	row := q.queryRow(ctx, q.getAuthTokenByJWTStmt, getAuthTokenByJWT, jwtToken)
-	var i AuthToken
+func (q *Queries) GetAuthTokenByUserID(ctx context.Context, userID uuid.UUID) (GoogleToken, error) {
+	row := q.queryRow(ctx, q.getAuthTokenByUserIDStmt, getAuthTokenByUserID, userID)
+	var i GoogleToken
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
-		&i.JwtToken,
+		&i.AccessToken,
 		&i.RefreshToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,
@@ -99,38 +51,58 @@ func (q *Queries) GetAuthTokenByJWT(ctx context.Context, jwtToken string) (AuthT
 	return i, err
 }
 
-const getAuthTokensByUserID = `-- name: GetAuthTokensByUserID :many
-SELECT id, user_id, jwt_token, refresh_token, expires_at, created_at FROM auth_tokens
+const updateAuthTokenRefreshToken = `-- name: UpdateAuthTokenRefreshToken :exec
+UPDATE google_tokens
+SET refresh_token = $2
 WHERE user_id = $1
-ORDER BY created_at DESC
 `
 
-func (q *Queries) GetAuthTokensByUserID(ctx context.Context, userID uuid.UUID) ([]AuthToken, error) {
-	rows, err := q.query(ctx, q.getAuthTokensByUserIDStmt, getAuthTokensByUserID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuthToken
-	for rows.Next() {
-		var i AuthToken
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.JwtToken,
-			&i.RefreshToken,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type UpdateAuthTokenRefreshTokenParams struct {
+	UserID       uuid.UUID      `json:"user_id"`
+	RefreshToken sql.NullString `json:"refresh_token"`
+}
+
+func (q *Queries) UpdateAuthTokenRefreshToken(ctx context.Context, arg UpdateAuthTokenRefreshTokenParams) error {
+	_, err := q.exec(ctx, q.updateAuthTokenRefreshTokenStmt, updateAuthTokenRefreshToken, arg.UserID, arg.RefreshToken)
+	return err
+}
+
+const upsertAuthToken = `-- name: UpsertAuthToken :one
+INSERT INTO google_tokens (
+    user_id,
+    access_token,
+    refresh_token,
+    expires_at
+) VALUES (
+    $1, $2, $3, $4
+) ON CONFLICT (user_id) DO UPDATE SET
+    access_token = COALESCE(NULLIF($2, ''), google_tokens.access_token),
+    refresh_token = COALESCE(NULLIF($3, ''), google_tokens.refresh_token),
+    expires_at = $4
+RETURNING user_id, access_token, refresh_token, expires_at, created_at
+`
+
+type UpsertAuthTokenParams struct {
+	UserID       uuid.UUID      `json:"user_id"`
+	AccessToken  sql.NullString `json:"access_token"`
+	RefreshToken sql.NullString `json:"refresh_token"`
+	ExpiresAt    time.Time      `json:"expires_at"`
+}
+
+func (q *Queries) UpsertAuthToken(ctx context.Context, arg UpsertAuthTokenParams) (GoogleToken, error) {
+	row := q.queryRow(ctx, q.upsertAuthTokenStmt, upsertAuthToken,
+		arg.UserID,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.ExpiresAt,
+	)
+	var i GoogleToken
+	err := row.Scan(
+		&i.UserID,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }

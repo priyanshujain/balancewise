@@ -13,21 +13,26 @@ type tokenRepository struct {
 	queries *Queries
 }
 
-func NewTokenRepository(db *sql.DB) domain.TokenRepository {
+func NewTokenRepository(db *sql.DB) domain.GoogleTokenRepository {
 	return &tokenRepository{
 		queries: New(db),
 	}
 }
 
-func (r *tokenRepository) Create(ctx context.Context, token domain.AuthToken) (*domain.AuthToken, error) {
+func (r *tokenRepository) SetToken(ctx context.Context, token domain.GoogleToken) (*domain.GoogleToken, error) {
+	var accessToken sql.NullString
+	if token.AccessToken != nil && *token.AccessToken != "" {
+		accessToken = sql.NullString{String: *token.AccessToken, Valid: true}
+	}
+
 	var refreshToken sql.NullString
-	if token.RefreshToken != nil {
+	if token.RefreshToken != nil && *token.RefreshToken != "" {
 		refreshToken = sql.NullString{String: *token.RefreshToken, Valid: true}
 	}
 
-	dbToken, err := r.queries.CreateAuthToken(ctx, CreateAuthTokenParams{
+	dbToken, err := r.queries.UpsertAuthToken(ctx, UpsertAuthTokenParams{
 		UserID:       token.UserID,
-		JwtToken:     token.JWTToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    token.ExpiresAt,
 	})
@@ -35,11 +40,11 @@ func (r *tokenRepository) Create(ctx context.Context, token domain.AuthToken) (*
 		return nil, err
 	}
 
-	return toDomainAuthToken(dbToken), nil
+	return toDomainGoogleToken(dbToken), nil
 }
 
-func (r *tokenRepository) GetByJWT(ctx context.Context, jwtToken string) (*domain.AuthToken, error) {
-	dbToken, err := r.queries.GetAuthTokenByJWT(ctx, jwtToken)
+func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.GoogleToken, error) {
+	dbToken, err := r.queries.GetAuthTokenByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -47,42 +52,33 @@ func (r *tokenRepository) GetByJWT(ctx context.Context, jwtToken string) (*domai
 		return nil, err
 	}
 
-	return toDomainAuthToken(dbToken), nil
+	return toDomainGoogleToken(dbToken), nil
 }
 
-func (r *tokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.AuthToken, error) {
-	dbTokens, err := r.queries.GetAuthTokensByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	tokens := make([]domain.AuthToken, len(dbTokens))
-	for i, dbToken := range dbTokens {
-		tokens[i] = *toDomainAuthToken(dbToken)
-	}
-
-	return tokens, nil
+func (r *tokenRepository) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error {
+	return r.queries.UpdateAuthTokenRefreshToken(ctx, UpdateAuthTokenRefreshTokenParams{
+		UserID:       userID,
+		RefreshToken: sql.NullString{String: refreshToken, Valid: true},
+	})
 }
 
-func (r *tokenRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.queries.DeleteAuthToken(ctx, id)
-}
-
-func (r *tokenRepository) DeleteByJWT(ctx context.Context, jwtToken string) error {
-	return r.queries.DeleteAuthTokenByJWT(ctx, jwtToken)
+func (r *tokenRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	return r.queries.DeleteAuthTokenByUserID(ctx, userID)
 }
 
 func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
 	return r.queries.DeleteExpiredAuthTokens(ctx)
 }
 
-func toDomainAuthToken(dbToken AuthToken) *domain.AuthToken {
-	token := &domain.AuthToken{
-		ID:        dbToken.ID,
+func toDomainGoogleToken(dbToken GoogleToken) *domain.GoogleToken {
+	token := &domain.GoogleToken{
 		UserID:    dbToken.UserID,
-		JWTToken:  dbToken.JwtToken,
 		ExpiresAt: dbToken.ExpiresAt,
 		CreatedAt: dbToken.CreatedAt,
+	}
+
+	if dbToken.AccessToken.Valid {
+		token.AccessToken = &dbToken.AccessToken.String
 	}
 
 	if dbToken.RefreshToken.Valid {

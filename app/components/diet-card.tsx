@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, View, Image, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ImageViewerModal } from '@/components/image-viewer-modal';
+import { SyncStatusBadge } from '@/components/sync-status-badge';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { DietEntry } from '@/services/database/diet';
@@ -19,21 +20,6 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Meal',
-      'Are you sure you want to delete this meal?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDelete?.(meal.id)
-        },
-      ]
-    );
-  };
 
   const getTimeAgo = (timestamp: number) => {
     const now = Date.now();
@@ -75,13 +61,16 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
         </Pressable>
 
         <Pressable style={styles.infoContainer} onPress={() => onEdit?.(meal)}>
-          <ThemedText style={[styles.timeText, { color: colors.tabIconDefault }]}>
-            {getTimeAgo(meal.timestamp)}
-          </ThemedText>
+          <View style={styles.timeRow}>
+            <ThemedText style={[styles.timeText, { color: colors.tabIconDefault }]}>
+              {getTimeAgo(meal.timestamp)}
+            </ThemedText>
+            <SyncStatusBadge status={meal.syncStatus} size={16} />
+          </View>
 
-          {meal.description && (
-            <ThemedText style={styles.description}>
-              {meal.description}
+          {meal.name && (
+            <ThemedText style={styles.name}>
+              {meal.name}
             </ThemedText>
           )}
 
@@ -142,6 +131,12 @@ export function DietCard({ meal, onEdit, onDelete }: DietCardProps) {
               </View>
             </View>
           </View>
+
+          {meal.description && (
+            <ThemedText style={[styles.description, { color: colors.tabIconDefault }]}>
+              {meal.description}
+            </ThemedText>
+          )}
         </Pressable>
       </View>
 
@@ -188,14 +183,24 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     justifyContent: 'space-between',
   },
-  timeText: {
-    fontSize: 13,
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 4,
   },
-  description: {
+  timeText: {
+    fontSize: 13,
+  },
+  name: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  description: {
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 16,
   },
   nutritionContainer: {
     gap: 8,

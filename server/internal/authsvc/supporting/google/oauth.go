@@ -12,6 +12,10 @@ import (
 	"google.golang.org/api/option"
 )
 
+const (
+	ScopeDriveFile = "https://www.googleapis.com/auth/drive.file"
+)
+
 type Config struct {
 	ClientID     string
 	ClientSecret string
@@ -49,11 +53,49 @@ func (s *OAuthService) GenerateAuthURL(state string) string {
 	return s.config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
+func (s *OAuthService) GenerateDriveAuthURL(state string, userEmail string) string {
+	driveConfig := &oauth2.Config{
+		ClientID:     s.config.ClientID,
+		ClientSecret: s.config.ClientSecret,
+		RedirectURL:  s.config.RedirectURL + "-drive",
+		Scopes: []string{
+			ScopeDriveFile,
+		},
+		Endpoint: google.Endpoint,
+	}
+
+	return driveConfig.AuthCodeURL(
+		state,
+		oauth2.AccessTypeOffline,
+		oauth2.ApprovalForce,
+		oauth2.SetAuthURLParam("login_hint", userEmail),
+		oauth2.SetAuthURLParam("include_granted_scopes", "true"),
+	)
+}
+
 // ExchangeCode exchanges an authorization code for a token
 func (s *OAuthService) ExchangeCode(ctx context.Context, code string) (*oauth2.Token, error) {
 	token, err := s.config.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+	return token, nil
+}
+
+func (s *OAuthService) ExchangeDriveCode(ctx context.Context, code string) (*oauth2.Token, error) {
+	driveConfig := &oauth2.Config{
+		ClientID:     s.config.ClientID,
+		ClientSecret: s.config.ClientSecret,
+		RedirectURL:  s.config.RedirectURL + "-drive",
+		Scopes: []string{
+			ScopeDriveFile,
+		},
+		Endpoint: google.Endpoint,
+	}
+
+	token, err := driveConfig.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange drive code: %w", err)
 	}
 	return token, nil
 }
@@ -76,6 +118,32 @@ func (s *OAuthService) GetUserInfo(ctx context.Context, token *oauth2.Token) (*U
 		Name:    userInfo.Name,
 		Picture: userInfo.Picture,
 	}, nil
+}
+
+// RefreshToken refreshes an access token using a refresh token
+func (s *OAuthService) RefreshToken(ctx context.Context, refreshToken string) (*oauth2.Token, error) {
+	fullConfig := &oauth2.Config{
+		ClientID:     s.config.ClientID,
+		ClientSecret: s.config.ClientSecret,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+			ScopeDriveFile,
+		},
+		Endpoint: google.Endpoint,
+	}
+
+	token := &oauth2.Token{
+		RefreshToken: refreshToken,
+	}
+
+	tokenSource := fullConfig.TokenSource(ctx, token)
+	freshToken, err := tokenSource.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	return freshToken, nil
 }
 
 // GenerateRandomState generates a random state string for OAuth flow

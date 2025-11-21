@@ -117,13 +117,29 @@ func (r *userRepository) UpdateByEmail(ctx context.Context, email string, name *
 	return toDomainUser(dbUser), nil
 }
 
+func (r *userRepository) UpdateGDriveAllowed(ctx context.Context, id uuid.UUID, allowed bool) (*domain.User, error) {
+	dbUser, err := r.queries.UpdateGDriveAllowed(ctx, UpdateGDriveAllowedParams{
+		ID:            id,
+		GdriveAllowed: allowed,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+
+	return toDomainUser(dbUser), nil
+}
+
 func toDomainUser(dbUser User) *domain.User {
 	user := &domain.User{
-		ID:        dbUser.ID,
-		Email:     dbUser.Email,
-		Name:      dbUser.Name,
-		CreatedAt: dbUser.CreatedAt,
-		UpdatedAt: dbUser.UpdatedAt,
+		ID:            dbUser.ID,
+		Email:         dbUser.Email,
+		Name:          dbUser.Name,
+		GDriveAllowed: dbUser.GdriveAllowed,
+		CreatedAt:     dbUser.CreatedAt,
+		UpdatedAt:     dbUser.UpdatedAt,
 	}
 
 	if dbUser.ProfilePic.Valid {

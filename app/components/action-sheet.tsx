@@ -34,7 +34,7 @@ export function ActionSheet({ visible, onClose, title, options }: ActionSheetPro
       onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={() => {}}>
             <View>
               <ThemedView style={[styles.container, { backgroundColor: colors.card }]}>
                 {title && (
@@ -49,7 +49,7 @@ export function ActionSheet({ visible, onClose, title, options }: ActionSheetPro
                   {options.map((option, index) => (
                     <Pressable
                       key={index}
-                      style={styles.optionsContainer}
+                      style={styles.option}
                       onPress={() => handleOptionPress(option.onPress)}>
                       <ThemedText
                         style={[

@@ -32,3 +32,11 @@ SET
     updated_at = NOW()
 WHERE email = sqlc.arg('email')
 RETURNING *;
+
+-- name: UpdateGDriveAllowed :one
+UPDATE users
+SET
+    gdrive_allowed = sqlc.arg('gdrive_allowed'),
+    updated_at = NOW()
+WHERE id = sqlc.arg('id')
+RETURNING *;

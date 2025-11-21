@@ -3,14 +3,17 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { GoalsProvider } from '@/contexts/goals-context';
 import { WorkoutSessionProvider } from '@/contexts/WorkoutSessionContext';
+import { NetworkProvider, useNetwork } from '@/contexts/network-context';
 import { seedDatabaseIfNeeded } from '@/services/database';
+import { OfflineIndicator } from '@/components/offline-indicator';
+import { registerBackgroundSync } from '@/services/sync/background-sync-task';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -19,6 +22,7 @@ export const unstable_settings = {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { user, isLoading } = useAuth();
+  const { topOffset } = useNetwork();
   const segments = useSegments();
   const router = useRouter();
 
@@ -38,12 +42,31 @@ function RootLayoutNav() {
     }
   }, [user, segments, isLoading, router]);
 
+  useEffect(() => {
+    if (user?.hasDrivePermission) {
+      registerBackgroundSync().catch((error) => {
+        console.error('Failed to register background sync:', error);
+      });
+    }
+  }, [user?.hasDrivePermission]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      flex: 1,
+      paddingTop: withTiming(topOffset, {
+        duration: 300,
+      }),
+    };
+  });
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Animated.View style={animatedStyle}>
+        <Stack>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen
           name="add-goal"
           options={{
@@ -70,6 +93,7 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', title: 'Exercise Details' }}
         />
       </Stack>
+      </Animated.View>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
@@ -79,13 +103,16 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <GoalsProvider>
-          <WorkoutSessionProvider>
-            <RootLayoutNav />
-          </WorkoutSessionProvider>
-        </GoalsProvider>
-      </AuthProvider>
+      <NetworkProvider>
+        <AuthProvider>
+          <GoalsProvider>
+            <WorkoutSessionProvider>
+              <RootLayoutNav />
+              <OfflineIndicator />
+            </WorkoutSessionProvider>
+          </GoalsProvider>
+        </AuthProvider>
+      </NetworkProvider>
     </GestureHandlerRootView>
   );
 }

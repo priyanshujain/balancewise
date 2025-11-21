@@ -7,20 +7,18 @@ import (
 	"github.com/google/uuid"
 )
 
-type AuthToken struct {
-	ID           uuid.UUID
+type GoogleToken struct {
 	UserID       uuid.UUID
-	JWTToken     string
+	AccessToken  *string
 	RefreshToken *string
 	ExpiresAt    time.Time
 	CreatedAt    time.Time
 }
 
-type TokenRepository interface {
-	Create(ctx context.Context, token AuthToken) (*AuthToken, error)
-	GetByJWT(ctx context.Context, jwtToken string) (*AuthToken, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID) ([]AuthToken, error)
-	Delete(ctx context.Context, id uuid.UUID) error
-	DeleteByJWT(ctx context.Context, jwtToken string) error
+type GoogleTokenRepository interface {
+	SetToken(ctx context.Context, token GoogleToken) (*GoogleToken, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*GoogleToken, error)
+	UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error
+	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
 	DeleteExpired(ctx context.Context) error
 }

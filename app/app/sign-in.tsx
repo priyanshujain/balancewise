@@ -60,17 +60,22 @@ export default function SignInScreen() {
 
           setStatusMessage('Authentication successful!');
 
-          // Save authentication data
-          await signIn(result.token, result.user);
+          const userData = {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            picture: result.user.picture,
+            hasDrivePermission: result.user.gdrive_allowed ?? false,
+          };
 
-          // Navigate to app
+          await signIn(result.token, userData);
+
           router.replace('/(tabs)');
         }
       } catch (error) {
         console.error('Polling error:', error);
-        // Continue polling even if there's an error
       }
-    }, 1000); // Poll every 1 second
+    }, 1000);
   };
 
   const handleSignIn = async () => {

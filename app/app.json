@@ -11,8 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-          "NSCameraUsageDescription": "BalanceWise needs access to your camera to capture",
-          "NSPhotoLibraryUsageDescription": "BalanceWise needs access to your photo library"
+        "NSCameraUsageDescription": "BalanceWise needs access to your camera to capture",
+        "NSPhotoLibraryUsageDescription": "BalanceWise needs access to your photo library"
       },
       "bundleIdentifier": "com.priyanshujain.balancewise"
     },
@@ -46,10 +46,11 @@
       [
         "expo-image-picker",
         {
-            "photosPermission": "BalanceWise needs access to your photo library.",
-            "cameraPermission": "BalanceWise needs access to your camera"
+          "photosPermission": "BalanceWise needs access to your photo library.",
+          "cameraPermission": "BalanceWise needs access to your camera"
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

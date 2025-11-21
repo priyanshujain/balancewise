@@ -19,7 +19,7 @@ import (
 type Service struct {
 	userRepo  domain.UserRepository
 	stateRepo domain.StateRepository
-	tokenRepo domain.TokenRepository
+	tokenRepo domain.GoogleTokenRepository
 	oauth     *google.OAuthService
 	jwtSvc    *jwt.Service
 }
@@ -27,7 +27,7 @@ type Service struct {
 type ServiceConfig struct {
 	UserRepository  domain.UserRepository
 	StateRepository domain.StateRepository
-	TokenRepository domain.TokenRepository
+	TokenRepository domain.GoogleTokenRepository
 	OAuthService    *google.OAuthService
 	JWTService      *jwt.Service
 }
@@ -121,20 +121,14 @@ func (s *Service) HandleCallback(ctx context.Context, state, code string) (*doma
 		slog.Info("updated existing user", "email", user.Email)
 	}
 
-	// Generate JWT
-	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
-	if err != nil {
-		return nil, "", domain.WrapError("failed to generate JWT", err)
-	}
-
-	// Store token in database
-	authToken := domain.AuthToken{
+	// Store Google OAuth tokens in database
+	googleToken := domain.GoogleToken{
 		UserID:       user.ID,
-		JWTToken:     jwtToken,
+		AccessToken:  &token.AccessToken,
 		RefreshToken: &token.RefreshToken,
-		ExpiresAt:    time.Now().Add(30 * 24 * time.Hour), // 30 days
+		ExpiresAt:    token.Expiry,
 	}
-	_, err = s.tokenRepo.Create(ctx, authToken)
+	_, err = s.tokenRepo.SetToken(ctx, googleToken)
 	if err != nil {
 		return nil, "", domain.WrapError("failed to store token", err)
 	}
@@ -145,74 +139,56 @@ func (s *Service) HandleCallback(ctx context.Context, state, code string) (*doma
 		return nil, "", domain.WrapError("failed to update state", err)
 	}
 
+	// Generate JWT
+	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
+	if err != nil {
+		return nil, "", domain.WrapError("failed to generate JWT", err)
+	}
+
 	slog.Info("successfully authenticated user", "email", user.Email, "state", state)
 	return user, jwtToken, nil
 }
 
 // PollAuth checks if authentication is complete for a given state
 func (s *Service) PollAuth(ctx context.Context, state string) (authenticated bool, user *domain.User, token string, err error) {
-	// Get state from database
 	authState, err := s.stateRepo.Get(ctx, state)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return false, nil, "", nil // State doesn't exist, return not authenticated
+			return false, nil, "", nil
 		}
 		return false, nil, "", domain.WrapError("failed to get state", err)
 	}
 
-	// Check if expired
 	if time.Now().After(authState.ExpiresAt) {
 		return false, nil, "", nil
 	}
 
-	// Check if authenticated
 	if !authState.Authenticated || authState.UserID == nil {
 		return false, nil, "", nil
 	}
 
-	// Get user
 	user, err = s.userRepo.GetByID(ctx, *authState.UserID)
 	if err != nil {
 		return false, nil, "", domain.WrapError("failed to get user", err)
 	}
 
-	// Get token
-	tokens, err := s.tokenRepo.GetByUserID(ctx, *authState.UserID)
+	jwtToken, err := s.jwtSvc.GenerateToken(user.ID, user.Email, user.Name)
 	if err != nil {
-		return false, nil, "", domain.WrapError("failed to get token", err)
+		return false, nil, "", domain.WrapError("failed to generate JWT", err)
 	}
 
-	if len(tokens) == 0 {
-		return false, nil, "", fmt.Errorf("no tokens found for user")
-	}
-
-	// Get the most recent token
-	token = tokens[0].JWTToken
-
-	// Delete state after successful poll
 	_ = s.stateRepo.Delete(ctx, state)
 
-	return true, user, token, nil
+	return true, user, jwtToken, nil
 }
 
 // VerifyToken validates a JWT token and returns the user
 func (s *Service) VerifyToken(ctx context.Context, tokenString string) (*domain.User, error) {
-	// Verify JWT
 	claims, err := s.jwtSvc.VerifyToken(tokenString)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
 	}
 
-	// Check if token exists in database
-	_, err = s.tokenRepo.GetByJWT(ctx, tokenString)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, domain.ErrInvalidToken
-		}
-		return nil, domain.WrapError("failed to get token", err)
-	}
-
-	// Get user
 	userID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
@@ -229,6 +205,47 @@ func (s *Service) VerifyToken(ctx context.Context, tokenString string) (*domain.
 	return user, nil
 }
 
+// GetOrRefreshGoogleToken returns a valid Google access token for the user,
+// refreshing it if necessary
+func (s *Service) GetOrRefreshGoogleToken(ctx context.Context, userID uuid.UUID) (accessToken string, expiresAt time.Time, err error) {
+	storedToken, err := s.tokenRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return "", time.Time{}, domain.ErrNotFound
+		}
+		return "", time.Time{}, domain.WrapError("failed to get token", err)
+	}
+
+	if storedToken.RefreshToken == nil || *storedToken.RefreshToken == "" {
+		return "", time.Time{}, domain.ErrUnauthorized
+	}
+
+	needsRefresh := storedToken.AccessToken == nil || *storedToken.AccessToken == "" || time.Now().After(storedToken.ExpiresAt)
+
+	if needsRefresh {
+		freshToken, err := s.oauth.RefreshToken(ctx, *storedToken.RefreshToken)
+		if err != nil {
+			return "", time.Time{}, domain.WrapError("failed to refresh Google token", err)
+		}
+
+		updatedToken := domain.GoogleToken{
+			UserID:       userID,
+			AccessToken:  &freshToken.AccessToken,
+			RefreshToken: &freshToken.RefreshToken,
+			ExpiresAt:    freshToken.Expiry,
+		}
+
+		_, err = s.tokenRepo.SetToken(ctx, updatedToken)
+		if err != nil {
+			return "", time.Time{}, domain.WrapError("failed to update token", err)
+		}
+
+		return freshToken.AccessToken, freshToken.Expiry, nil
+	}
+
+	return *storedToken.AccessToken, storedToken.ExpiresAt, nil
+}
+
 // CleanupExpired removes expired states and tokens
 func (s *Service) CleanupExpired(ctx context.Context) error {
 	if err := s.stateRepo.DeleteExpired(ctx); err != nil {
@@ -240,6 +257,79 @@ func (s *Service) CleanupExpired(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Service) InitiateDriveAuth(ctx context.Context, userID uuid.UUID) (authURL string, state string, err error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return "", "", domain.WrapError("failed to get user", err)
+	}
+
+	state, err = google.GenerateRandomState(32)
+	if err != nil {
+		return "", "", domain.WrapError("failed to generate state", err)
+	}
+
+	authURL = s.oauth.GenerateDriveAuthURL(state, user.Email)
+
+	_, err = s.stateRepo.Create(ctx, state, authURL, time.Now().Add(10*time.Minute))
+	if err != nil {
+		return "", "", domain.WrapError("failed to create auth state", err)
+	}
+
+	_, err = s.stateRepo.Update(ctx, state, userID, false)
+	if err != nil {
+		return "", "", domain.WrapError("failed to update state with user ID", err)
+	}
+
+	slog.Info("initiated Drive auth", "state", state, "user_id", userID)
+	return authURL, state, nil
+}
+
+func (s *Service) HandleDriveCallback(ctx context.Context, state, code string) (*domain.User, error) {
+	authState, err := s.stateRepo.Get(ctx, state)
+	if err != nil {
+		return nil, domain.WrapError("invalid or expired state", err)
+	}
+
+	if time.Now().After(authState.ExpiresAt) {
+		return nil, domain.ErrInvalidState
+	}
+
+	if authState.UserID == nil {
+		return nil, fmt.Errorf("state does not have associated user")
+	}
+
+	token, err := s.oauth.ExchangeDriveCode(ctx, code)
+	if err != nil {
+		return nil, domain.WrapError("failed to exchange drive code", err)
+	}
+
+	user, err := s.userRepo.GetByID(ctx, *authState.UserID)
+	if err != nil {
+		return nil, domain.WrapError("failed to get user", err)
+	}
+
+	googleToken := domain.GoogleToken{
+		UserID:       user.ID,
+		AccessToken:  &token.AccessToken,
+		RefreshToken: &token.RefreshToken,
+		ExpiresAt:    token.Expiry,
+	}
+	_, err = s.tokenRepo.SetToken(ctx, googleToken)
+	if err != nil {
+		return nil, domain.WrapError("failed to store token", err)
+	}
+
+	_ = s.stateRepo.Delete(ctx, state)
+
+	user, err = s.userRepo.UpdateGDriveAllowed(ctx, user.ID, true)
+	if err != nil {
+		return nil, domain.WrapError("failed to update gdrive_allowed", err)
+	}
+
+	slog.Info("successfully granted Drive permissions", "email", user.Email, "user_id", user.ID)
+	return user, nil
 }
 
 // downloadAndEncodeImage downloads an image from a URL and returns it as base64
